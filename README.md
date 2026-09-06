@@ -71,8 +71,20 @@ can be compared side by side.
 
 ```bash
 pip install -r requirements.txt
+cp .env.example .env   # then edit .env and add your free EIA API key
 streamlit run app.py
 ```
+
+CrudeCurve's term structure curve is powered by the free EIA (U.S.
+Energy Information Administration) Open Data API, which requires an API
+key:
+
+1. Register for a free key at https://www.eia.gov/opendata/register.php
+2. Put it in `.env` as `EIA_API_KEY=your_key_here` (`.env` is
+   git-ignored and never committed — see `.env.example` for the
+   template). If no key is set, the app falls back to EIA's public
+   `DEMO_KEY`, which works but is rate-limited, so it's meant for quick
+   testing only, not everyday use.
 
 Run the unit tests:
 
@@ -82,30 +94,34 @@ pytest tests/
 
 ## Data limitations
 
-Free market data APIs (Yahoo Finance via `yfinance`) do not provide the
-same always-on ladder of forward-month continuous contracts (e.g. `CL2!`,
-`CL3!`, ...) that a paid terminal like Bloomberg or Refinitiv offers.
-CrudeCurve fetches:
+**Forward curve (EIA API):** Yahoo Finance (via `yfinance`) does not
+publish dated forward-month WTI contracts on its free tier — verified
+directly, those symbols return no data at all. CrudeCurve instead
+sources the actual forward curve from the EIA's Open Data API, which
+publishes official daily settlement prices for WTI **Future Contract 1
+through Contract 4** (`RCLC1`–`RCLC4`; Contract 1 = front month,
+Contract 4 ≈ 3 months out, spaced roughly monthly). This is real,
+verified U.S. government market data with no gaps — but it is only
+**4 points**, not the longer 5-6 month ladder the original design
+envisioned. The curve shown will therefore look shorter than a paid
+terminal's, but every point on it is genuinely traded, current data
+rather than an estimate. See `config.py` for the exact series IDs and
+API route.
 
-- `CL=F` — the front-month continuous WTI contract, which is reliably
-  updated.
-- A set of **dated NYMEX WTI contract symbols** (e.g. `CLZ25.NYM` for
-  December 2025 delivery) as forward-month legs. These are real,
-  specific tradable contracts, not synthetic data — but they can be
-  thinly listed or return stale/no data outside their active trading
-  window, since Yahoo Finance's free tier doesn't guarantee continuous
-  coverage for every dated contract at every point in time.
+**Front-month history (yfinance):** `CL=F`, the continuous front-month
+WTI contract, remains sourced from yfinance for the 2-year daily
+history used in the roll-yield backtest — this series is reliable and
+has no gaps.
 
-The app never fabricates a price for a missing contract: if a symbol
-returns no data, it's dropped from the curve; if its most recent data
-is more than 5 days old, it's flagged as stale in the dashboard rather
-than presented as current. See `config.py` for the exact ticker list
-and the reasoning behind it.
+The app never fabricates a price for a missing contract: if EIA has no
+data for a contract series, it's dropped from the curve; if its most
+recent data is more than 5 days old, it's flagged as stale in the
+dashboard rather than presented as current.
 
-The roll-yield simulation similarly works around the lack of a full
-historical forward ladder by using the front-month continuous series'
-own month-end price behavior as a proxy for the realized roll effect
-(see the docstring in `roll_yield.py` for the full explanation).
+The roll-yield simulation works around the lack of a full historical
+forward ladder by using the front-month continuous series' own
+month-end price behavior as a proxy for the realized roll effect (see
+the docstring in `roll_yield.py` for the full explanation).
 
 ## Screenshot
 
@@ -121,11 +137,12 @@ _Add a screenshot of the running dashboard here, e.g.:_
 crudecurve/
 ├── README.md
 ├── requirements.txt
-├── config.py            # tickers, lookback window, data source notes
-├── data_fetcher.py       # yfinance data pulls
-├── term_structure.py     # curve classification + annualized spread
-├── roll_yield.py         # 2-year roll yield backtest
-├── app.py                # Streamlit dashboard
+├── .env.example          # template for EIA_API_KEY (copy to .env)
+├── config.py              # tickers, EIA series IDs, lookback window, notes
+├── data_fetcher.py        # EIA API (curve) + yfinance (history) data pulls
+├── term_structure.py      # curve classification + annualized spread
+├── roll_yield.py          # 2-year roll yield backtest
+├── app.py                 # Streamlit dashboard
 └── tests/
     └── test_term_structure.py
 ```

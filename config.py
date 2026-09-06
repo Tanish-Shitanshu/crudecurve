@@ -6,40 +6,47 @@ numbers in the code) means anyone reviewing the project can see exactly
 what assumptions drive the analysis, and change them in one spot.
 """
 
-# --- Data source tickers -----------------------------------------------
-# yfinance exposes CME WTI Crude Oil futures as continuous contracts:
+# --- Data sources -------------------------------------------------------
+# yfinance exposes CME WTI Crude Oil futures as a single continuous
+# front-month series:
 #   CL=F  -> front-month (nearest expiry) continuous contract
-#   CL1.F..CL6.F are NOT reliably available on Yahoo Finance for retail
-#   free access. In practice, Yahoo only reliably publishes the single
-#   front-month continuous series (CL=F) plus a small number of dated
-#   contract symbols (e.g. CLZ25.NYM for Dec 2025 WTI) that are only
-#   listed close to their trading window.
-#
-# LIMITATION (see README "Data Limitations" section for full detail):
-# Free APIs (yfinance/Yahoo Finance) do not provide a clean, always-on
-# ladder of forward-month continuous contracts (CL2!, CL3!, ... like a
-# paid terminal such as Bloomberg/Refinitiv would). To build a real term
-# structure without paying for data, CrudeCurve fetches the front-month
-# continuous contract (CL=F) plus a set of dated NYMEX WTI futures
-# symbols for specific expiry months. These dated symbols are the actual
-# tradable forward-month contracts, not synthetic/faked prices — but
-# they can go stale or unlisted outside their active trading window,
-# which is why data_fetcher.py checks each fetch and reports staleness
-# instead of silently failing.
+# This series is reliable and used for the 2-year daily history that
+# feeds the roll-yield backtest in roll_yield.py.
 FRONT_MONTH_TICKER = "CL=F"
 
-# Dated NYMEX WTI contract symbols: CL + month code + 2-digit year.
-# Month codes follow the standard futures naming convention:
-# F=Jan, G=Feb, H=Mar, J=Apr, K=May, M=Jun, N=Jul, Q=Aug, U=Sep, V=Oct,
-# X=Nov, Z=Dec. Example: "CLZ25.NYM" = WTI Crude, December 2025, NYMEX.
-# We list the next 5 calendar months after "front month" as forward legs.
-FORWARD_MONTH_TICKERS = [
-    "CLX25.NYM",  # Nov 2025
-    "CLZ25.NYM",  # Dec 2025
-    "CLF26.NYM",  # Jan 2026
-    "CLG26.NYM",  # Feb 2026
-    "CLH26.NYM",  # Mar 2026
-]
+# LIMITATION (see README "Data Limitations" section for full detail):
+# Yahoo Finance (via yfinance) does not publish dated forward-month WTI
+# contracts (e.g. a December-2025-delivery contract) on its free tier —
+# verified directly: those symbols return no data at all. So the actual
+# term structure (front vs. forward months) is instead sourced from the
+# U.S. Energy Information Administration's free, official Open Data API,
+# which publishes daily settlement prices for WTI "Future Contract 1"
+# through "Future Contract 4" (Contract 1 = front month, Contract 4 =
+# roughly 4 months out). This is real government market data, not a
+# synthetic estimate — it just gives 4 points instead of a long ladder.
+#
+# EIA v2 API route: /v2/petroleum/pri/fut/data/
+# Series IDs (facet "series"), confirmed via the EIA API browser under
+# Petroleum > Prices > Spot & Futures Prices > WTI Futures:
+#   RCLC1 = Cushing, OK Crude Oil Future Contract 1 (Dollars per Barrel)
+#   RCLC2 = Cushing, OK Crude Oil Future Contract 2
+#   RCLC3 = Cushing, OK Crude Oil Future Contract 3
+#   RCLC4 = Cushing, OK Crude Oil Future Contract 4
+# Contracts roll roughly monthly, so Contract 1 -> Contract 4 spans
+# roughly 3 months of separation (used as EIA_CONTRACT_MONTH_SPACING
+# below for the annualized spread calculation).
+EIA_API_BASE_URL = "https://api.eia.gov/v2/petroleum/pri/fut/data/"
+EIA_CONTRACT_SERIES = ["RCLC1", "RCLC2", "RCLC3", "RCLC4"]
+
+# The EIA API key is a secret and must never be hardcoded here. It is
+# loaded from the EIA_API_KEY environment variable (see .env, which is
+# git-ignored) by data_fetcher.py using python-dotenv. Register a free
+# key at https://www.eia.gov/opendata/register.php.
+EIA_API_KEY_ENV_VAR = "EIA_API_KEY"
+
+# Approximate month spacing between consecutive EIA WTI futures
+# contracts (Contract 1, 2, 3, 4 are consecutive monthly deliveries).
+EIA_CONTRACT_MONTH_SPACING = 1
 
 # --- Lookback windows -----------------------------------------------
 # 2 years of daily history, matching the roll-yield backtest requirement.
