@@ -2,6 +2,14 @@
 
 **WTI Crude Oil Term Structure & Roll Yield Visualizer**
 
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![Built with Streamlit](https://img.shields.io/badge/built%20with-Streamlit-FF4B4B?logo=streamlit&logoColor=white)
+
+Visualizing what the oil futures curve reveals about storage costs and
+market stress, and quantifying the cost of holding a rolling futures
+position over time.
+
 Author: **Tanish Shitanshu** — built as a portfolio project targeting the
 **Intern Market Analyst** role at Futures First.
 
@@ -9,6 +17,29 @@ CrudeCurve visualizes the WTI crude oil futures curve (front-month vs.
 forward-month prices) to classify the market as **contango** or
 **backwardation**, and quantifies the **roll yield** an investor
 experiences from continuously rolling a long futures position over time.
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Why This Matters](#why-this-matters-plain-english)
+- [Formulas Used](#formulas-used)
+- [Setup](#setup)
+- [Data Limitations](#data-limitations)
+- [Screenshot](#screenshot)
+- [Project Structure](#project-structure)
+
+## Quick Start
+
+```bash
+git clone https://github.com/Tanish-Shitanshu/crudecurve.git
+cd crudecurve
+pip install -r requirements.txt
+cp .env.example .env  # add your free EIA API key
+streamlit run app.py
+```
+
+See [Setup](#setup) below for details on getting an EIA API key and
+running the test suite.
 
 ## Why this matters (plain English)
 
@@ -130,6 +161,9 @@ _Add a screenshot of the running dashboard here, e.g.:_
 ```
 ![CrudeCurve dashboard](docs/screenshot.png)
 ```
+
+**Sample output:** Screenshot coming soon — see [Quick Start](#quick-start)
+above to run it locally in the meantime.
 
 ## Project structure
 
