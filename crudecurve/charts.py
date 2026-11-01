@@ -22,13 +22,14 @@ COLORS = {
 def _style(fig: go.Figure, title: str, x_title: str, y_title: str, range_slider: bool = False) -> go.Figure:
     """Apply the shared layout to a figure."""
     fig.update_layout(
-        title=dict(text=title, x=0),
+        # Title on the first row, legend on the second, so they never overlap on a narrow screen.
+        title=dict(text=title, x=0, y=0.96, yanchor="top", font=dict(size=15)),
         xaxis_title=x_title,
         yaxis_title=y_title,
         hovermode="x unified",
-        height=460 if range_slider else 400,
-        margin=dict(l=10, r=10, t=60, b=10),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=1, xanchor="right"),
+        height=470 if range_slider else 410,
+        margin=dict(l=10, r=10, t=85, b=10),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0, xanchor="left"),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
@@ -69,7 +70,7 @@ def roll_yield_figure(roll_yield_df: pd.DataFrame) -> go.Figure:
         hovertemplate="$%{y:.2f}<extra></extra>",
     ))
     return _style(
-        fig, "Roll-window proxy vs spot price change (last 2 years)",
+        fig, "Roll-window proxy vs spot (2 years)",
         "Date", "Cumulative change (USD per barrel)", range_slider=True,
     )
 
@@ -82,7 +83,7 @@ def volatility_figure(volatility: pd.Series) -> go.Figure:
         line=dict(color=COLORS["primary"]), hovertemplate="%{y:.1f}%<extra></extra>",
     ))
     return _style(
-        fig, "Rolling 21-day volatility (annualised, roll days excluded)",
+        fig, "21-day rolling volatility (annualised)",
         "Date", "Annualised volatility (%)", range_slider=True,
     )
 

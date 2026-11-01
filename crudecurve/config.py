@@ -53,6 +53,9 @@ STALE_DATA_THRESHOLD_DAYS = 5
 # A curve needs at least this many live contracts to be usable.
 MIN_LIVE_CONTRACTS = 4
 
+# The sidebar can show fewer contracts than are live (down to this many).
+MIN_CONTRACTS_SHOWN = 3
+
 # A contract whose price is more than this % away from the average of its
 # neighbours on the curve is flagged (not dropped) as a possible bad print.
 OUTLIER_PCT = 10.0

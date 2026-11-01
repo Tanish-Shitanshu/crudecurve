@@ -110,3 +110,14 @@ def test_dollar_signs_in_the_summary_are_escaped_so_they_do_not_become_latex(off
 def test_no_info_error_or_warning_banners_on_live_data(offline_app):
     at = offline_app([100.0, 99.0, 98.0, 97.0, 96.0, 95.0, 94.0, 93.0]).run()
     assert not at.error and not at.warning and not at.info
+
+
+def test_contracts_shown_slider_goes_down_to_three_without_errors(offline_app):
+    at = offline_app([100.0, 99.0, 98.0, 97.0, 96.0, 95.0, 94.0, 93.0]).run()
+    slider = at.sidebar.slider[0]
+    assert (slider.min, slider.max, slider.value) == (3, 6, 6)
+    for n in (3, 4, 5, 6):
+        at.sidebar.slider[0].set_value(n).run()
+        assert not at.exception, n
+        table = next(df for df in at.dataframe if "Contract" in df.value.columns)
+        assert len(table.value) == n

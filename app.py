@@ -13,7 +13,7 @@ from crudecurve import storage, views
 from crudecurve.config import (
     CACHE_TTL_SECONDS,
     DEFAULT_RISK_LOOKBACK_YEARS,
-    MIN_LIVE_CONTRACTS,
+    MIN_CONTRACTS_SHOWN,
     RISK_HISTORY_YEARS,
     RISK_LOOKBACK_OPTIONS_YEARS,
 )
@@ -58,8 +58,8 @@ with st.sidebar:
         format_func=lambda years: f"{years} years",
     )
     n_shown = (
-        st.slider("Contracts on the curve", MIN_LIVE_CONTRACTS, available, available)
-        if available > MIN_LIVE_CONTRACTS else available
+        st.slider("Contracts on the curve", MIN_CONTRACTS_SHOWN, available, available)
+        if available > MIN_CONTRACTS_SHOWN else available
     )
     n_contracts = st.number_input("Position size (contracts)", min_value=1, max_value=10_000, value=1, step=1,
                                   help="1 contract = 1,000 barrels")

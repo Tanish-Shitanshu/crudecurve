@@ -133,21 +133,21 @@ def render_roll_yield(m: dict) -> None:
 
 
 def _var_table(m: dict) -> pd.DataFrame:
-    """VaR for the selected window and the last 12 months, with observation counts."""
+    """VaR for the selected window and the last 12 months, with observation counts (3 narrow columns)."""
     rows = []
     risk = m["risk"]
     windows = (
         (f"{m['lookback_years']} years", "var"),
-        (f"Last {RECENT_WINDOW_DAYS // 30} months", "var_recent"),
+        (f"last {RECENT_WINDOW_DAYS // 30} months", "var_recent"),
     )
     for label, key in windows:
         for confidence in VAR_CONFIDENCE_LEVELS:
             v = risk[key][confidence]
+            usd = format_optional(v["var_usd"], lambda x: format_usd(x, 0))
+            pct = format_optional(v["var_pct"], lambda x: format_pct(x * 100))
             rows.append({
-                "Measure": f"1-day VaR {int(confidence * 100)}%",
-                "Window": label,
-                "VaR (% of notional)": format_optional(v["var_pct"], lambda x: format_pct(x * 100)),
-                "VaR (USD)": format_optional(v["var_usd"], lambda x: format_usd(x, 0)),
+                "1-day VaR": f"{int(confidence * 100)}%, {label}",
+                "Loss (USD, % of notional)": f"{usd} ({pct})",
                 "Observations": v["observations"],
             })
     return pd.DataFrame(rows)
