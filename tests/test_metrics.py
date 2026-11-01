@@ -43,3 +43,11 @@ def test_a_rising_curve_is_contango_and_a_roll_cost(curve, history):
 
 def test_snapshot_source_is_passed_through(curve, history):
     assert metrics.build_metrics(curve, history, 2, 1, source="snapshot")["source"] == "snapshot"
+
+
+def test_volatility_series_covers_the_lookback_window(curve, history):
+    m = metrics.build_metrics(curve, history, lookback_years=2, n_contracts=1)
+    series = m["volatility_series"]
+    assert not series.empty
+    assert series.index.min() > history["date"].max() - pd.DateOffset(years=2)
+    assert series.iloc[-1] == pytest.approx(m["risk"]["volatility"])

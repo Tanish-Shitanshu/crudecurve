@@ -1,0 +1,11 @@
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+# Never show raw Python tracebacks to a viewer.
+showErrorDetails = "none"
+# Hide the developer toolbar (Deploy button etc.).
+toolbarMode = "minimal"

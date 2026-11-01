@@ -1,160 +1,111 @@
 """
-app.py — Streamlit dashboard tying together the data, term structure,
-and roll yield modules into one page.
+app.py — Streamlit dashboard: page layout, sidebar controls and data
+loading. The calculations live in metrics.py / risk.py / term_structure.py,
+the charts in charts.py and the tabs in views.py.
 
 Run with: streamlit run app.py
 """
 
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 
 import storage
-from config import CONTRACT_MONTH_SPACING
+import views
+from config import (
+    CACHE_TTL_SECONDS,
+    DEFAULT_RISK_LOOKBACK_YEARS,
+    MIN_LIVE_CONTRACTS,
+    RISK_HISTORY_YEARS,
+    RISK_LOOKBACK_OPTIONS_YEARS,
+)
 from data_fetcher import get_front_month_history
+from metrics import build_metrics
 from pipeline import load_curve
-from term_structure import classify_curve, compute_annualized_spread
-from roll_yield import simulate_roll_yield, summarize_roll_yield
+from sql_queries import run_query
 
 st.set_page_config(page_title="CrudeCurve", layout="wide")
 
-st.title("CrudeCurve: WTI Crude Oil Term Structure & Roll Yield")
-st.caption("Author: Tanish Shitanshu")
 
-# --- Load data ---------------------------------------------------------
-with st.spinner("Fetching WTI futures data..."):
+@st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Fetching WTI futures data...")
+def load_market_data():
+    """Fetch, validate and save the curve, and download the CL=F history."""
     conn = storage.get_connection()
-    curve_result = load_curve(conn)
-    conn.close()
-    curve_df = curve_result.curve
-    history_df = get_front_month_history()
+    try:
+        curve_result = load_curve(conn)
+    finally:
+        conn.close()
+    try:
+        history = get_front_month_history(RISK_HISTORY_YEARS)
+    except Exception:
+        history = pd.DataFrame(columns=["date", "close"])  # shown as "history unavailable"
+    return curve_result, history
 
-if curve_df.empty:
+
+st.title("CrudeCurve")
+st.caption("WTI crude futures: term structure, roll yield and risk. Author: Tanish Shitanshu")
+
+curve_result, history = load_market_data()
+if curve_result.curve.empty:
     st.error(curve_result.message)
     st.stop()
 
-curve_df = curve_df.sort_values("month_index").reset_index(drop=True)
+# --- Sidebar controls ------------------------------------------------------
+available = len(curve_result.curve)
+with st.sidebar:
+    st.header("Settings")
+    lookback_years = st.radio(
+        "VaR lookback window", RISK_LOOKBACK_OPTIONS_YEARS,
+        index=RISK_LOOKBACK_OPTIONS_YEARS.index(DEFAULT_RISK_LOOKBACK_YEARS),
+        format_func=lambda years: f"{years} years",
+    )
+    n_shown = (
+        st.slider("Contracts on the curve", MIN_LIVE_CONTRACTS, available, available)
+        if available > MIN_LIVE_CONTRACTS else available
+    )
+    n_contracts = st.number_input("Position size (contracts)", min_value=1, max_value=10_000, value=1, step=1,
+                                  help="1 contract = 1,000 barrels")
 
-# --- Term structure classification -------------------------------------
-classification = classify_curve(curve_df)
-front_row = curve_df.iloc[0]
-back_row = curve_df.iloc[-1]
-months_between = (back_row["month_index"] - front_row["month_index"]) * CONTRACT_MONTH_SPACING
+    conn = storage.get_connection()
+    price_contracts = storage.list_price_contracts(conn)
+    front = back = None
+    if len(price_contracts) >= 2:
+        front = st.selectbox("Spread: front contract", price_contracts[:-1])
+        later = price_contracts[price_contracts.index(front) + 1:]
+        back = st.selectbox("Spread: back contract", later, index=len(later) - 1)
 
-annualized_spread = compute_annualized_spread(
-    front_price=front_row["price"],
-    far_price=back_row["price"],
-    months_between=months_between,
-) if months_between > 0 else 0.0
+    if st.button("Refresh data"):
+        st.cache_data.clear()
+        st.rerun()
+    st.caption("Data: Yahoo Finance (unofficial, delayed daily closes).")
 
-roll_yield_df = simulate_roll_yield(history_df)
-cumulative_roll_yield = summarize_roll_yield(roll_yield_df)
+# --- Compute once, show in tabs -------------------------------------------
+curve = curve_result.curve.head(n_shown)
+metrics = build_metrics(curve, history, lookback_years, int(n_contracts), curve_result.source)
+quality = pd.DataFrame([vars(r) for r in curve_result.results], columns=["contract", "rule", "status", "detail"])
 
 if curve_result.source == "snapshot":
     st.warning(curve_result.message)
+if history.empty:
+    st.warning("Price history is unavailable right now, so the roll and risk sections are empty.")
 
-st.caption(f"Front-month data as of: {front_row['as_of']}")
+spread_df = pd.DataFrame()
+if front is not None:
+    spread_df = run_query(conn, "spread_moving_average", front=front, back=back)
 
-# --- Metrics row ---------------------------------------------------------
-col1, col2, col3 = st.columns(3)
-col1.metric("Front-Month Price", f"${front_row['price']:.2f}")
-col2.metric("Annualized Carry/Backwardation", f"{annualized_spread:+.2f}%")
-sign = "-" if cumulative_roll_yield < 0 else "+"
-col3.metric("2-Year Cumulative Roll Yield", f"{sign}${abs(cumulative_roll_yield):.2f}/bbl")
+tabs = st.tabs(["Overview", "Curve", "Roll Yield", "Risk", "SQL Analysis", "Data Quality", "Methodology"])
+with tabs[0]:
+    views.render_overview(metrics, curve, history, quality)
+with tabs[1]:
+    views.render_curve(metrics, curve, spread_df, front, back)
+with tabs[2]:
+    views.render_roll_yield(metrics)
+with tabs[3]:
+    views.render_risk(metrics)
+with tabs[4]:
+    views.render_sql(conn, front, back)
+with tabs[5]:
+    views.render_quality(metrics, quality)
+with tabs[6]:
+    views.render_methodology()
 
-# --- Chart 1: Current futures curve ---------------------------------------
-st.subheader(f"Current Futures Curve — {classification['label']}")
-
-fig_curve = go.Figure()
-fig_curve.add_trace(
-    go.Scatter(
-        x=curve_df["ticker"],
-        y=curve_df["price"],
-        mode="lines+markers",
-        name="Futures Price",
-        line=dict(width=3),
-        marker=dict(size=9),
-    )
-)
-fig_curve.update_layout(
-    xaxis_title="Contract (front → back)",
-    yaxis_title="Price (USD/barrel)",
-    height=420,
-)
-st.plotly_chart(fig_curve, use_container_width=True)
-st.caption(
-    f"Annualized spread from front to back month: {annualized_spread:+.2f}%. "
-    "Positive = Contango (future delivery costs more, implying storage cost). "
-    "Negative = Backwardation (near-term delivery costs more, implying scarcity)."
-)
-
-# --- Chart 2: Roll yield vs spot price change ---------------------------
-st.subheader("2-Year History: Cumulative Roll Yield vs. Spot Price Change")
-
-if roll_yield_df.empty:
-    st.info("Not enough historical data to compute roll yield.")
-else:
-    fig_roll = go.Figure()
-    fig_roll.add_trace(
-        go.Scatter(
-            x=roll_yield_df["date"],
-            y=roll_yield_df["cumulative_spot_change"],
-            mode="lines",
-            name="Spot Price Change",
-        )
-    )
-    fig_roll.add_trace(
-        go.Scatter(
-            x=roll_yield_df["date"],
-            y=roll_yield_df["cumulative_roll_yield"],
-            mode="lines",
-            name="Cumulative Roll Yield",
-        )
-    )
-    fig_roll.update_layout(
-        xaxis_title="Date",
-        yaxis_title="Cumulative Change (USD/barrel)",
-        height=420,
-    )
-    st.plotly_chart(fig_roll, use_container_width=True)
-    st.caption(
-        "The gap between these two lines is the 'hidden cost' (or gain) an investor "
-        "experiences from continuously rolling futures contracts, separate from the "
-        "outright change in the oil price itself."
-    )
-
-# --- Data quality checks ------------------------------------------------
-with st.expander("Data quality checks (this run)"):
-    st.dataframe(pd.DataFrame([vars(r) for r in curve_result.results]), hide_index=True)
-
-# --- How this works -----------------------------------------------------
-with st.expander("How this works"):
-    st.markdown(
-        """
-**Contango** is when futures contracts for later delivery cost more than
-contracts for sooner delivery. This is the "normal" state for a
-storable commodity like oil, because holding barrels in a tank until a
-future date costs money (storage, insurance, financing) — buyers of the
-far-month contract pay a premium to compensate whoever stores the oil.
-
-**Backwardation** is the opposite: near-term contracts cost more than
-far-term ones. This usually signals the market expects a near-term
-supply squeeze — buyers will pay up to get oil *now* rather than wait
-for a cheaper contract later.
-
-**Roll yield** is the return (or cost) an investor experiences purely
-from rotating out of an expiring futures contract into the next one,
-separate from any change in the underlying price of oil. In contango,
-rolling means constantly selling a cheaper near contract and buying a
-more expensive far one — a steady drag. In backwardation, it's the
-reverse — a steady tailwind.
-
-**Historical examples:** In April 2020, collapsing demand during the
-COVID-19 pandemic pushed WTI into extreme contango (even briefly
-negative front-month prices), making roll yield sharply negative for
-anyone holding long oil ETFs. In 2022, supply concerns following
-Russia's invasion of Ukraine pushed the WTI curve into backwardation,
-which briefly made rolling long futures positions a source of
-additional return rather than a drag.
-        """
-    )
+conn.close()

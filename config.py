@@ -97,3 +97,8 @@ MONTHS_PER_YEAR = 12
 # Approximate number of trading days in a year, used to annualize
 # daily-return based statistics if needed.
 TRADING_DAYS_PER_YEAR = 252
+
+# --- Dashboard -------------------------------------------------------------
+# Market data is cached for this long before the app fetches it again
+# (the sidebar's Refresh button clears the cache immediately).
+CACHE_TTL_SECONDS = 900
