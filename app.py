@@ -16,9 +16,7 @@ from roll_yield import simulate_roll_yield, summarize_roll_yield
 st.set_page_config(page_title="CrudeCurve", layout="wide")
 
 st.title("CrudeCurve: WTI Crude Oil Term Structure & Roll Yield")
-st.caption(
-    "Author: Tanish Shitanshu — built for the Intern Market Analyst role at Futures First"
-)
+st.caption("Author: Tanish Shitanshu")
 
 # --- Load data ---------------------------------------------------------
 with st.spinner("Fetching WTI futures data..."):
@@ -56,7 +54,8 @@ st.caption(f"Front-month data as of: {front_row['as_of']}")
 col1, col2, col3 = st.columns(3)
 col1.metric("Front-Month Price", f"${front_row['price']:.2f}")
 col2.metric("Annualized Carry/Backwardation", f"{annualized_spread:+.2f}%")
-col3.metric("2-Year Cumulative Roll Yield", f"${cumulative_roll_yield:+.2f}/bbl")
+sign = "-" if cumulative_roll_yield < 0 else "+"
+col3.metric("2-Year Cumulative Roll Yield", f"{sign}${abs(cumulative_roll_yield):.2f}/bbl")
 
 # --- Chart 1: Current futures curve ---------------------------------------
 st.subheader(f"Current Futures Curve — {classification['label']}")

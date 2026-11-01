@@ -10,8 +10,7 @@ Visualizing what the oil futures curve reveals about storage costs and
 market stress, and quantifying the cost of holding a rolling futures
 position over time.
 
-Author: **Tanish Shitanshu** — built as a portfolio project targeting the
-**Intern Market Analyst** role at Futures First.
+Author: **Tanish Shitanshu**
 
 CrudeCurve visualizes the WTI crude oil futures curve (front-month vs.
 forward-month prices) to classify the market as **contango** or
