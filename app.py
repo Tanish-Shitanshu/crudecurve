@@ -5,11 +5,14 @@ and roll yield modules into one page.
 Run with: streamlit run app.py
 """
 
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+import storage
 from config import CONTRACT_MONTH_SPACING
-from data_fetcher import get_current_curve, get_front_month_history
+from data_fetcher import get_front_month_history
+from pipeline import load_curve
 from term_structure import classify_curve, compute_annualized_spread
 from roll_yield import simulate_roll_yield, summarize_roll_yield
 
@@ -20,11 +23,14 @@ st.caption("Author: Tanish Shitanshu")
 
 # --- Load data ---------------------------------------------------------
 with st.spinner("Fetching WTI futures data..."):
-    curve_df = get_current_curve()
+    conn = storage.get_connection()
+    curve_result = load_curve(conn)
+    conn.close()
+    curve_df = curve_result.curve
     history_df = get_front_month_history()
 
 if curve_df.empty:
-    st.error("Could not fetch any futures price data right now. Please try again later.")
+    st.error(curve_result.message)
     st.stop()
 
 curve_df = curve_df.sort_values("month_index").reset_index(drop=True)
@@ -44,9 +50,8 @@ annualized_spread = compute_annualized_spread(
 roll_yield_df = simulate_roll_yield(history_df)
 cumulative_roll_yield = summarize_roll_yield(roll_yield_df)
 
-if curve_df["is_stale"].any():
-    stale_dates = curve_df.loc[curve_df["is_stale"], "as_of"].unique()
-    st.warning(f"Some contracts show stale data (last updated: {', '.join(str(d) for d in stale_dates)}).")
+if curve_result.source == "snapshot":
+    st.warning(curve_result.message)
 
 st.caption(f"Front-month data as of: {front_row['as_of']}")
 
@@ -117,6 +122,10 @@ else:
         "experiences from continuously rolling futures contracts, separate from the "
         "outright change in the oil price itself."
     )
+
+# --- Data quality checks ------------------------------------------------
+with st.expander("Data quality checks (this run)"):
+    st.dataframe(pd.DataFrame([vars(r) for r in curve_result.results]), hide_index=True)
 
 # --- How this works -----------------------------------------------------
 with st.expander("How this works"):

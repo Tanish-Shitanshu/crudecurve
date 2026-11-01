@@ -5,12 +5,12 @@ Finance servers.
 
 What is covered: candidate contract generation, parsing of per-contract
 closes, graceful handling of missing / expired / failing contracts (a
-price is dropped rather than invented), month_index spacing, and the
-yfinance history cleanup.
+price is left empty rather than invented), and the yfinance history
+cleanup. Deciding which contracts are usable is tested in test_validation.py.
 """
 
 import sys
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -85,79 +85,64 @@ def test_fetch_contract_network_error_returns_none(monkeypatch):
     assert data_fetcher._fetch_contract_latest("CLZ26.NYM") == {"price": None, "as_of": None}
 
 
-# --- get_current_curve ----------------------------------------------------
+# --- fetch_candidate_quotes -----------------------------------------------
 
-def _patch_contracts(monkeypatch, by_months_ahead):
-    """
-    Patch _fetch_contract_latest so each candidate contract's result is
-    looked up by its months-ahead position; unlisted ones return no data.
-    """
-    today = date.today()
-    symbol_to_ahead = {c[0]: c[2] for c in data_fetcher._candidate_contracts(today)}
+def test_fetch_candidate_quotes_returns_one_row_per_candidate(monkeypatch):
+    today = date(2026, 11, 1)
+    fake = {
+        "CLX26.NYM": {"price": None, "as_of": None},  # expired: no data
+        "CLZ26.NYM": {"price": 104.0, "as_of": date(2026, 10, 30)},
+    }
     none = {"price": None, "as_of": None}
-    monkeypatch.setattr(
-        data_fetcher,
-        "_fetch_contract_latest",
-        lambda symbol: by_months_ahead.get(symbol_to_ahead[symbol], none),
-    )
+    monkeypatch.setattr(data_fetcher, "_fetch_contract_latest", lambda symbol: fake.get(symbol, none))
+
+    quotes = data_fetcher.fetch_candidate_quotes(today)
+
+    assert len(quotes) == len(data_fetcher._candidate_contracts(today))
+    assert list(quotes.columns) == ["ticker", "delivery_month", "months_ahead", "price", "as_of"]
+    assert list(quotes["ticker"][:2]) == ["CLX26", "CLZ26"]
+    assert list(quotes["delivery_month"][:3]) == ["2026-11", "2026-12", "2027-01"]
+    assert pd.isna(quotes["price"][0])  # missing data is kept as empty, not invented
+    assert quotes["price"][1] == 104.0
 
 
-def test_get_current_curve_keeps_first_six_live_contracts(monkeypatch):
-    today = date.today()
-    _patch_contracts(
-        monkeypatch,
-        {i: {"price": 70.0 + i, "as_of": today} for i in range(9)},
-    )
-    curve = data_fetcher.get_current_curve()
-
-    assert len(curve) == 6
-    assert list(curve["month_index"]) == [0, 1, 2, 3, 4, 5]
-    assert list(curve["price"]) == [70.0, 71.0, 72.0, 73.0, 74.0, 75.0]
-    assert not curve["is_stale"].any()
-    assert list(curve.columns) == ["ticker", "month_index", "price", "as_of", "is_stale"]
-
-
-def test_get_current_curve_drops_expired_and_missing_contracts(monkeypatch):
-    today = date.today()
-    fresh = lambda price: {"price": price, "as_of": today}
-    _patch_contracts(
-        monkeypatch,
-        {
-            # months_ahead 0: no data (expired) -> dropped
-            1: {"price": 99.0, "as_of": today - timedelta(days=30)},  # expired/old -> dropped
-            2: fresh(70.0),
-            # 3: no data -> dropped, leaving a gap in delivery months
-            4: fresh(72.0),
-            5: fresh(73.0),
-        },
-    )
-    curve = data_fetcher.get_current_curve()
-
-    assert list(curve["price"]) == [70.0, 72.0, 73.0]
-    assert 99.0 not in list(curve["price"])
-    assert not curve["is_stale"].any()
-
-
-def test_get_current_curve_month_index_is_relative_to_front_and_keeps_gaps(monkeypatch):
-    today = date.today()
-    fresh = lambda price: {"price": price, "as_of": today}
-    _patch_contracts(monkeypatch, {1: fresh(70.0), 2: fresh(71.0), 4: fresh(73.0)})
-    curve = data_fetcher.get_current_curve()
-
-    # Front live contract is index 0; the missing 4th delivery month leaves a gap.
-    assert list(curve["month_index"]) == [0, 1, 3]
-
-
-def test_get_current_curve_with_no_live_contracts_returns_empty_frame(monkeypatch):
-    _patch_contracts(monkeypatch, {})
-    assert data_fetcher.get_current_curve().empty
-
-
-def test_get_current_curve_handles_network_errors(monkeypatch):
+def test_fetch_candidate_quotes_handles_network_errors(monkeypatch):
     monkeypatch.setattr(
         data_fetcher.yf, "Ticker", lambda symbol: _FakeTicker(exc=ConnectionError("offline"))
     )
-    assert data_fetcher.get_current_curve().empty
+    quotes = data_fetcher.fetch_candidate_quotes(date(2026, 11, 1))
+    assert quotes["price"].isna().all()
+
+
+# --- get_contract_history --------------------------------------------------
+
+def test_contract_history_returns_dates_and_closes(monkeypatch):
+    raw = _closes([70.0, 71.5], date(2026, 10, 30))
+    monkeypatch.setattr(data_fetcher.yf, "Ticker", lambda symbol: _FakeTicker(raw))
+    result = data_fetcher.get_contract_history("CLZ26", "1y")
+    assert list(result.columns) == ["trade_date", "close"]
+    assert list(result["trade_date"]) == [date(2026, 10, 29), date(2026, 10, 30)]
+    assert list(result["close"]) == [70.0, 71.5]
+
+
+def test_contract_history_uses_yahoo_symbol(monkeypatch):
+    seen = []
+
+    def fake_ticker(symbol):
+        seen.append(symbol)
+        return _FakeTicker(pd.DataFrame())
+
+    monkeypatch.setattr(data_fetcher.yf, "Ticker", fake_ticker)
+    result = data_fetcher.get_contract_history("CLZ26", "1y")
+    assert seen == ["CLZ26.NYM"]
+    assert result.empty and list(result.columns) == ["trade_date", "close"]
+
+
+def test_contract_history_network_error_returns_empty(monkeypatch):
+    monkeypatch.setattr(
+        data_fetcher.yf, "Ticker", lambda symbol: _FakeTicker(exc=ConnectionError("offline"))
+    )
+    assert data_fetcher.get_contract_history("CLZ26", "1y").empty
 
 
 # --- get_front_month_history ---------------------------------------------

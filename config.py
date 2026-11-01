@@ -29,6 +29,34 @@ CURVE_CONTRACT_COUNT = 6  # live contracts kept for the curve
 # front-to-back price gap into an annualized percentage).
 CONTRACT_MONTH_SPACING = 1
 
+# --- Storage (SQLite) ----------------------------------------------------
+# One local file, created on first run. It is git-ignored: it only holds
+# data fetched from Yahoo Finance, never anything secret.
+DB_PATH = "data/crudecurve.db"
+
+# Yahoo suffix for NYMEX contracts, used when fetching a contract's history.
+YAHOO_SYMBOL_SUFFIX = ".NYM"
+
+# Daily closes kept per live contract. First run downloads BACKFILL_PERIOD;
+# later runs only top up with REFRESH_PERIOD (if the last stored bar is
+# not older than REFRESH_MAX_GAP_DAYS, otherwise we backfill again).
+BACKFILL_PERIOD = "1y"
+REFRESH_PERIOD = "1mo"
+REFRESH_MAX_GAP_DAYS = 20
+
+# --- Validation rules (see validation.py) ----------------------------------
+# A price is "stale" if the most recent available close is older than this
+# many calendar days. 5 days covers a normal long weekend/holiday without
+# masking a genuinely dead/expired contract.
+STALE_DATA_THRESHOLD_DAYS = 5
+
+# A curve needs at least this many live contracts to be usable.
+MIN_LIVE_CONTRACTS = 4
+
+# A contract whose price is more than this % away from the average of its
+# neighbours on the curve is flagged (not dropped) as a possible bad print.
+OUTLIER_PCT = 10.0
+
 # --- Lookback windows -----------------------------------------------
 # 2 years of daily history, matching the roll-yield backtest requirement.
 ROLL_YIELD_LOOKBACK_YEARS = 2
