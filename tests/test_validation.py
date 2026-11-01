@@ -3,16 +3,12 @@ test_validation.py — Every validation rule, passing and failing, plus the
 way validate_curve() puts them together.
 """
 
-import sys
 from datetime import date, timedelta
-from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import validation
-from validation import RuleResult
+from crudecurve import validation
+from crudecurve.validation import RuleResult
 
 TODAY = date(2026, 11, 1)
 

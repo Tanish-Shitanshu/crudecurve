@@ -21,7 +21,7 @@ from typing import NamedTuple
 import pandas as pd
 import yfinance as yf
 
-from config import (
+from crudecurve.config import (
     CANDIDATE_CONTRACT_MONTHS,
     CONTRACT_SYMBOL_TEMPLATE,
     FRONT_MONTH_TICKER,

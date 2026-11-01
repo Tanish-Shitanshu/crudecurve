@@ -37,14 +37,14 @@ from datetime import timedelta
 import numpy as np
 import pandas as pd
 
-from config import (
+from crudecurve.config import (
     BARRELS_PER_CONTRACT,
     RECENT_WINDOW_DAYS,
     TRADING_DAYS_PER_YEAR,
     VAR_CONFIDENCE_LEVELS,
     VOLATILITY_WINDOW_DAYS,
 )
-from expiry import roll_dates
+from crudecurve.expiry import roll_dates
 
 
 def compute_returns(history: pd.DataFrame) -> pd.DataFrame:

@@ -9,16 +9,12 @@ that window are summed into the cumulative roll yield, while the total
 move since the first day is tracked separately as cumulative spot change.
 """
 
-import sys
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from config import ROLL_DAYS_BEFORE_MONTH_END
-from roll_yield import simulate_roll_yield, summarize_roll_yield
+from crudecurve.config import ROLL_DAYS_BEFORE_MONTH_END
+from crudecurve.roll_yield import simulate_roll_yield, summarize_roll_yield
 
 EXPECTED_COLUMNS = ["date", "cumulative_roll_yield", "cumulative_spot_change"]
 

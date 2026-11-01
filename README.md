@@ -94,26 +94,27 @@ flowchart TD
 **Project structure**
 
 ```
-crudecurve/
-├── app.py               # Streamlit page: sidebar, data loading, tabs
-├── views.py             # one render function per tab
-├── charts.py            # all Plotly figures, one shared look
-├── config.py            # every constant and threshold in one place
-├── data_fetcher.py      # the only module that touches the network (yfinance)
-├── pipeline.py          # fetch -> validate -> save, with saved-snapshot fallback
-├── validation.py        # business rules, each returns pass / fail / flag / skipped
-├── storage.py           # SQLite tables and idempotent upserts
-├── expiry.py            # NYMEX expiry rule and roll days
-├── term_structure.py    # curve classification and annualised carry
-├── roll_yield.py        # 2-year roll-window proxy
-├── risk.py              # returns, volatility, VaR, drawdown, roll gain
-├── metrics.py           # one dictionary of headline metrics for screen, Excel and text
-├── sql_queries.py       # fixed, parameterised, read-only SQL
-├── report.py            # Excel workbook and CSV
-├── market_summary.py    # deterministic written summary (no model)
-├── formatting.py        # number and currency formatting
-├── docs/METHODOLOGY.md  # every formula, sign convention and rule
-├── tests/               # offline tests
+crudecurve/                   # repository root
+├── app.py                    # Streamlit entry point: sidebar, data loading, tabs
+├── crudecurve/               # the package
+│   ├── config.py             # every constant and threshold in one place
+│   ├── data_fetcher.py       # the only module that touches the network (yfinance)
+│   ├── pipeline.py           # fetch -> validate -> save, with saved-snapshot fallback
+│   ├── validation.py         # business rules, each returns pass / fail / flag / skipped
+│   ├── storage.py            # SQLite tables and idempotent upserts
+│   ├── expiry.py             # NYMEX expiry rule and roll days
+│   ├── term_structure.py     # curve classification and annualised carry
+│   ├── roll_yield.py         # 2-year roll-window proxy
+│   ├── risk.py               # returns, volatility, VaR, drawdown, roll gain
+│   ├── metrics.py            # one dictionary of headline metrics for screen, Excel and text
+│   ├── sql_queries.py        # fixed, parameterised, read-only SQL
+│   ├── report.py             # Excel workbook and CSV
+│   ├── market_summary.py     # deterministic written summary (no model)
+│   ├── formatting.py         # number and currency formatting
+│   ├── charts.py             # all Plotly figures, one shared look
+│   └── views.py              # one render function per tab
+├── docs/METHODOLOGY.md       # every formula, sign convention and rule
+├── tests/                    # offline tests
 └── .github/workflows/ci.yml
 ```
 

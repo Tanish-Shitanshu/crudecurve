@@ -3,18 +3,13 @@ test_sql_queries.py — Each preset query run on a small in-memory fixture
 where the answers can be worked out by hand.
 """
 
-import sys
 from datetime import date, timedelta
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import sql_queries
-import storage
-from validation import RuleResult
+from crudecurve import sql_queries, storage
+from crudecurve.validation import RuleResult
 
 # Spread (back - front) on 25 consecutive days. Front is flat at 100, so the
 # spread is just the back price minus 100.

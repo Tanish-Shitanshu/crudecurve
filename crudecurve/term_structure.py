@@ -25,7 +25,7 @@ answers two questions:
 
 import pandas as pd
 
-from config import MONTHS_PER_YEAR
+from crudecurve.config import MONTHS_PER_YEAR
 
 # If the front-to-back price difference is smaller than this fraction of
 # the front price, we call the curve "flat" rather than forcing a

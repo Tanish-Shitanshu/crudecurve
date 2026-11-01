@@ -20,11 +20,9 @@ from datetime import date, datetime, timezone
 
 import pandas as pd
 
-import data_fetcher
-import storage
-import validation
-from config import BACKFILL_PERIOD, REFRESH_MAX_GAP_DAYS, REFRESH_PERIOD
-from validation import RuleResult
+from crudecurve import data_fetcher, storage, validation
+from crudecurve.config import BACKFILL_PERIOD, REFRESH_MAX_GAP_DAYS, REFRESH_PERIOD
+from crudecurve.validation import RuleResult
 
 
 @dataclass

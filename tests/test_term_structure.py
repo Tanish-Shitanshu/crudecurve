@@ -4,15 +4,11 @@ annualized spread math in term_structure.py, using synthetic prices
 with known, hand-computable answers.
 """
 
-import sys
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from term_structure import classify_curve, compute_annualized_spread
+from crudecurve.term_structure import classify_curve, compute_annualized_spread
 
 
 def _make_curve(prices):

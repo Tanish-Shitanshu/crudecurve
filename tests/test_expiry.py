@@ -3,13 +3,9 @@ test_expiry.py — The NYMEX WTI expiry rule, checked against real, known
 contract expiry dates.
 """
 
-import sys
 from datetime import date
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from expiry import contract_expiry, roll_dates
+from crudecurve.expiry import contract_expiry, roll_dates
 
 
 def test_december_2025_contract_expires_20_nov_2025():

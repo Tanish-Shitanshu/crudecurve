@@ -3,17 +3,13 @@ test_risk.py — Risk metrics checked against synthetic series where the
 right answer can be worked out by hand.
 """
 
-import sys
 from datetime import date
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import risk
+from crudecurve import risk
 
 
 def _history(closes, start="2025-03-03"):

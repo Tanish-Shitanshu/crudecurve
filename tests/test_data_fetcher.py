@@ -9,15 +9,11 @@ price is left empty rather than invented), and the yfinance history
 cleanup. Deciding which contracts are usable is tested in test_validation.py.
 """
 
-import sys
 from datetime import date
-from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import data_fetcher
+from crudecurve import data_fetcher
 
 
 class _FakeTicker:

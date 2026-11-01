@@ -1,11 +1,7 @@
 """test_formatting.py — The sign always goes in front of the dollar sign."""
 
-import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from formatting import format_optional, format_pct, format_signed_usd, format_usd
+from crudecurve.formatting import format_optional, format_pct, format_signed_usd, format_usd
 
 
 def test_usd_negative_has_minus_before_the_dollar_sign():

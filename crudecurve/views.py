@@ -10,14 +10,13 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-import charts
-import sql_queries
-from config import RECENT_WINDOW_DAYS, VAR_CONFIDENCE_LEVELS
-from formatting import format_optional, format_pct, format_signed_usd, format_usd
-from market_summary import LIMITATIONS, build_market_summary
-from report import build_workbook, curve_to_csv
+from crudecurve import charts, sql_queries
+from crudecurve.config import RECENT_WINDOW_DAYS, VAR_CONFIDENCE_LEVELS
+from crudecurve.formatting import format_optional, format_pct, format_signed_usd, format_usd
+from crudecurve.market_summary import LIMITATIONS, build_market_summary
+from crudecurve.report import build_workbook, curve_to_csv
 
-METHODOLOGY_FILE = Path(__file__).parent / "docs" / "METHODOLOGY.md"
+METHODOLOGY_FILE = Path(__file__).resolve().parent.parent / "docs" / "METHODOLOGY.md"
 
 _REGIME_COLORS = {"Backwardation": "blue", "Contango": "orange", "Kinked": "violet", "Flat": "gray"}
 

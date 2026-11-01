@@ -1,7 +1,6 @@
 """test_market_summary.py — The rule-based summary uses the computed numbers."""
 
-import market_summary
-import metrics
+from crudecurve import market_summary, metrics
 
 
 def _metrics(curve, history, **kwargs):

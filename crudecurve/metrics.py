@@ -9,10 +9,10 @@ Every value is computed from real data passed in; nothing is hardcoded.
 
 import pandas as pd
 
-from config import CONTRACT_MONTH_SPACING, ROLL_YIELD_LOOKBACK_YEARS
-from risk import compute_returns, roll_gain_per_year, rolling_volatility, summarize_risk, window_returns
-from roll_yield import simulate_roll_yield, summarize_roll_yield
-from term_structure import classify_curve, compute_annualized_spread
+from crudecurve.config import CONTRACT_MONTH_SPACING, ROLL_YIELD_LOOKBACK_YEARS
+from crudecurve.risk import compute_returns, roll_gain_per_year, rolling_volatility, summarize_risk, window_returns
+from crudecurve.roll_yield import simulate_roll_yield, summarize_roll_yield
+from crudecurve.term_structure import classify_curve, compute_annualized_spread
 
 
 def build_metrics(

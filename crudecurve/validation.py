@@ -30,13 +30,13 @@ from datetime import date
 
 import pandas as pd
 
-from config import (
+from crudecurve.config import (
     CURVE_CONTRACT_COUNT,
     MIN_LIVE_CONTRACTS,
     OUTLIER_PCT,
     STALE_DATA_THRESHOLD_DAYS,
 )
-from expiry import contract_expiry
+from crudecurve.expiry import contract_expiry
 
 CURVE = "CURVE"  # the "contract" name used for curve-level rules
 

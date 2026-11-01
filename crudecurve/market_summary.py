@@ -5,8 +5,8 @@ numbers always produce the same text, and every number in the text comes
 from the metrics dictionary (see metrics.build_metrics).
 """
 
-from config import RECENT_WINDOW_DAYS
-from formatting import format_pct, format_signed_usd, format_usd
+from crudecurve.config import RECENT_WINDOW_DAYS
+from crudecurve.formatting import format_pct, format_signed_usd, format_usd
 
 LIMITATIONS = (
     "Limitations: unofficial, delayed Yahoo Finance daily closes; VaR is historical "

@@ -2,6 +2,7 @@
 [tool.ruff]
 line-length = 120
 extend-exclude = ["notes", "data"]
+src = ["."]
 
 [tool.ruff.lint]
 # E/W: pycodestyle, F: pyflakes (unused imports/variables), I: import order, B: likely bugs
@@ -9,3 +10,5 @@ select = ["E", "W", "F", "I", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Lets the tests (and ruff) import the `crudecurve` package from the repo root.
+pythonpath = ["."]

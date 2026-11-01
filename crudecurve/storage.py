@@ -23,8 +23,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from config import DB_PATH
-from validation import RuleResult
+from crudecurve.config import DB_PATH
+from crudecurve.validation import RuleResult
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS curve_snapshots (

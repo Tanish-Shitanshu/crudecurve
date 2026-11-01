@@ -12,8 +12,7 @@ import pytest
 import streamlit as st
 from streamlit.testing.v1 import AppTest
 
-import data_fetcher
-import storage
+from crudecurve import data_fetcher, storage
 
 APP = str(Path(__file__).resolve().parent.parent / "app.py")
 TODAY = date.today()

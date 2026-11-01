@@ -16,9 +16,9 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from config import RECENT_WINDOW_DAYS, VAR_CONFIDENCE_LEVELS
-from market_summary import LIMITATIONS, build_market_summary
-from risk import compute_returns, window_returns
+from crudecurve.config import RECENT_WINDOW_DAYS, VAR_CONFIDENCE_LEVELS
+from crudecurve.market_summary import LIMITATIONS, build_market_summary
+from crudecurve.risk import compute_returns, window_returns
 
 USD = '"$"#,##0.00;[Red]-"$"#,##0.00'
 USD0 = '"$"#,##0;[Red]-"$"#,##0'

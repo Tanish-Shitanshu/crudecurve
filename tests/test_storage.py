@@ -3,16 +3,12 @@ test_storage.py — SQLite storage, tested on an in-memory database so the
 real data/crudecurve.db file is never touched.
 """
 
-import sys
 from datetime import date
-from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import storage
-from validation import RuleResult
+from crudecurve import storage
+from crudecurve.validation import RuleResult
 
 
 def _conn():

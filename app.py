@@ -9,19 +9,18 @@ Run with: streamlit run app.py
 import pandas as pd
 import streamlit as st
 
-import storage
-import views
-from config import (
+from crudecurve import storage, views
+from crudecurve.config import (
     CACHE_TTL_SECONDS,
     DEFAULT_RISK_LOOKBACK_YEARS,
     MIN_LIVE_CONTRACTS,
     RISK_HISTORY_YEARS,
     RISK_LOOKBACK_OPTIONS_YEARS,
 )
-from data_fetcher import get_front_month_history
-from metrics import build_metrics
-from pipeline import load_curve
-from sql_queries import run_query
+from crudecurve.data_fetcher import get_front_month_history
+from crudecurve.metrics import build_metrics
+from crudecurve.pipeline import load_curve
+from crudecurve.sql_queries import run_query
 
 st.set_page_config(page_title="CrudeCurve", layout="wide")
 

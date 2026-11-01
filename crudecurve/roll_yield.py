@@ -27,7 +27,7 @@ smooth intra-month spot drift.
 
 import pandas as pd
 
-from config import ROLL_DAYS_BEFORE_MONTH_END
+from crudecurve.config import ROLL_DAYS_BEFORE_MONTH_END
 
 
 def simulate_roll_yield(history_df: pd.DataFrame) -> pd.DataFrame:

@@ -3,16 +3,11 @@ test_pipeline.py — fetch -> validate -> save, and the saved-snapshot
 fallback. The network is mocked and the database is in memory.
 """
 
-import sys
 from datetime import date, timedelta
-from pathlib import Path
 
 import pandas as pd
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import pipeline
-import storage
+from crudecurve import pipeline, storage
 
 TODAY = date(2026, 11, 1)
 MONTHS = ["2026-12", "2027-01", "2027-02", "2027-03", "2027-04", "2027-05"]

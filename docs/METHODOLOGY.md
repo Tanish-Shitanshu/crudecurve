@@ -108,7 +108,7 @@ effect is visible in the last-12-months VaR being higher than the 5-year VaR.
 
 ## Validation rules
 
-Applied on every refresh (`validation.py`); every outcome is logged to SQLite.
+Applied on every refresh (`crudecurve/validation.py`); every outcome is logged to SQLite.
 
 | Rule | Level | Result when violated |
 |---|---|---|

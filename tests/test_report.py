@@ -9,10 +9,9 @@ import pandas as pd
 import pytest
 from openpyxl import load_workbook
 
-import metrics
-import report
-from risk import compute_returns, window_returns
-from validation import RuleResult
+from crudecurve import metrics, report
+from crudecurve.risk import compute_returns, window_returns
+from crudecurve.validation import RuleResult
 
 
 @pytest.fixture

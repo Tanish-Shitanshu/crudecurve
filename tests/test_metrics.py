@@ -3,8 +3,7 @@
 import pandas as pd
 import pytest
 
-import metrics
-import risk
+from crudecurve import metrics, risk
 
 
 def test_metrics_follow_from_the_curve(curve, history):
