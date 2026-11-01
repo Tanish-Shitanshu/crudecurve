@@ -91,7 +91,7 @@ def test_contract_prices_are_saved_idempotently_and_latest_date_found():
 
 def test_quality_results_are_logged():
     conn = _conn()
-    results = [RuleResult("CLX26", "not_expired", "fail", "expired"), RuleResult("CURVE", "min_live_contracts", "pass", "6 live")]
+    results = [RuleResult("CLX26", "not_expired", "skipped", "expired on 2026-10-20"), RuleResult("CURVE", "min_live_contracts", "pass", "6 live")]
     storage.log_quality_results(conn, "2026-11-01T10:00:00", results)
     rows = conn.execute("SELECT contract, rule, status FROM data_quality_log ORDER BY contract").fetchall()
-    assert rows == [("CLX26", "not_expired", "fail"), ("CURVE", "min_live_contracts", "pass")]
+    assert rows == [("CLX26", "not_expired", "skipped"), ("CURVE", "min_live_contracts", "pass")]

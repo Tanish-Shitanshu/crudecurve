@@ -5,7 +5,9 @@ RuleResult (pass / fail / flag plus a plain-English reason), so each rule
 can be tested on its own and every outcome can be logged to SQLite.
 
 Contract-level rules (run on every candidate contract):
-  not_expired   the contract still trades (and Yahoo returned data for it)
+  not_expired   the contract still trades (and Yahoo returned data for it).
+                An expired contract is expected, not an error, so it is
+                recorded as "skipped"; only a live contract with no data fails.
   price_valid   the price is a real number and greater than zero
   price_fresh   the last close is not older than STALE_DATA_THRESHOLD_DAYS
 
@@ -16,7 +18,8 @@ Curve-level rules (run on the contracts that passed, contract = "CURVE"):
   outlier_check                  FLAGS (never drops) a contract whose price
                                  is far from the average of its neighbours
 
-A "fail" on a contract means that contract is left out of the curve.
+A "skipped" contract (expired) is left out of the curve. It is not a failure.
+A "fail" on a contract means a real violation; that contract is left out too.
 A "fail" on a curve-level rule means the whole curve is not usable.
 A "flag" is a warning only: the data is kept and shown.
 """
@@ -48,18 +51,21 @@ class RuleResult:
 
     contract: str
     rule: str
-    status: str  # "pass", "fail" or "flag"
+    status: str  # "pass", "fail", "flag" or "skipped"
     detail: str
 
 
 # --- Contract-level rules ---------------------------------------------------
 
 def check_not_expired(contract: str, delivery_month: str, has_data: bool, today: date) -> RuleResult:
-    """Fail if Yahoo returned nothing, or the calculated expiry date has passed."""
+    """
+    Skip a contract whose calculated expiry date has passed (expected, so not
+    a failure). Fail a contract that should still trade but returned no data.
+    """
     year, month = (int(part) for part in delivery_month.split("-"))
     expiry = contract_expiry(year, month)
     if today > expiry:
-        return RuleResult(contract, "not_expired", "fail", f"expired on {expiry}")
+        return RuleResult(contract, "not_expired", "skipped", f"expired on {expiry}")
     if not has_data:
         return RuleResult(contract, "not_expired", "fail", "no price data returned")
     return RuleResult(contract, "not_expired", "pass", f"trades until {expiry}")
@@ -152,8 +158,8 @@ def validate_curve(quotes: pd.DataFrame, today: date):
         has_price = not pd.isna(row.price)
         expiry_result = check_not_expired(row.ticker, row.delivery_month, has_price, today)
         results.append(expiry_result)
-        if expiry_result.status == "fail":
-            continue  # nothing more to check on a dead contract
+        if expiry_result.status != "pass":
+            continue  # expired (skipped) or no data (fail): nothing more to check
 
         valid_result = check_price_valid(row.ticker, row.price)
         results.append(valid_result)

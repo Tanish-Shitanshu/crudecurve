@@ -41,13 +41,19 @@ def test_not_expired_passes_on_the_expiry_day_itself():
     assert r.status == "pass"
 
 
-def test_not_expired_fails_after_the_expiry_date():
-    r = validation.check_not_expired("CLX26", "2026-11", True, TODAY)  # expired 2026-10-20
-    assert r.status == "fail" and "expired" in r.detail
+def test_not_expired_skips_a_contract_after_its_expiry_date():
+    # Expired is expected, so it is "skipped", not a failure.
+    r = validation.check_not_expired("CLX26", "2026-11", False, TODAY)  # expired 2026-10-20
+    assert r.status == "skipped" and r.detail == "expired on 2026-10-20"
 
 
-def test_not_expired_fails_when_no_data_was_returned():
-    r = validation.check_not_expired("CLZ26", "2026-12", False, TODAY)
+def test_not_expired_skips_an_expired_contract_even_if_old_data_exists():
+    r = validation.check_not_expired("CLX26", "2026-11", True, TODAY)
+    assert r.status == "skipped"
+
+
+def test_not_expired_fails_when_a_live_contract_returned_no_data():
+    r = validation.check_not_expired("CLZ26", "2026-12", False, TODAY)  # trades until 2026-11-20
     assert r.status == "fail" and "no price data" in r.detail
 
 
@@ -124,13 +130,14 @@ def test_validate_curve_keeps_first_six_live_contracts_with_front_at_index_zero(
     rows = [("CLX26", "2026-11", 0, None, None)] + _fresh_rows()  # CLX26 expired
     curve, results = validation.validate_curve(_quotes(rows), TODAY)
 
+    assert not any(r.status == "fail" for r in results)  # an expired contract is not an error
     assert len(curve) == 6
     assert list(curve["month_index"]) == [0, 1, 2, 3, 4, 5]
     assert curve["ticker"].iloc[0] == "C0"
     assert validation.curve_is_usable(results)
 
 
-def test_validate_curve_drops_expired_stale_and_invalid_contracts_and_logs_why():
+def test_validate_curve_skips_expired_and_drops_stale_and_invalid_contracts_and_logs_why():
     rows = _fresh_rows(count=6)
     rows[0] = ("C0", "2026-12", 1, 100.0, TODAY - timedelta(days=30))  # stale
     rows[1] = ("C1", "2027-01", 2, -3.0, TODAY)  # invalid price
@@ -141,7 +148,10 @@ def test_validate_curve_drops_expired_stale_and_invalid_contracts_and_logs_why()
     failed = {(r.contract, r.rule) for r in results if r.status == "fail"}
     assert ("C0", "price_fresh") in failed
     assert ("C1", "price_valid") in failed
-    assert ("CLX26", "not_expired") in failed
+    # The expired contract is recorded as skipped, never as a failure.
+    assert ("CLX26", "not_expired") not in failed
+    skipped = [(r.contract, r.rule, r.detail) for r in results if r.status == "skipped"]
+    assert skipped == [("CLX26", "not_expired", "expired on 2026-10-20")]
 
 
 def test_validate_curve_month_index_keeps_gaps():
