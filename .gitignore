@@ -5,6 +5,7 @@ venv/
 env/
 .env
 .pytest_cache/
+.ruff_cache/
 .DS_Store
 *.egg-info/
 .ipynb_checkpoints/

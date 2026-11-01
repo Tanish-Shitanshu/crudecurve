@@ -24,7 +24,6 @@ USD = '"$"#,##0.00;[Red]-"$"#,##0.00'
 USD0 = '"$"#,##0;[Red]-"$"#,##0'
 PCT = "0.00%;[Red]-0.00%"
 DATE = "yyyy-mm-dd"
-NUMBER = "#,##0.00"
 
 _HEADER_FILL = PatternFill("solid", fgColor="1F3A5F")
 _HEADER_FONT = Font(bold=True, color="FFFFFF")
