@@ -24,7 +24,7 @@ experiences from continuously rolling a long futures position over time.
 - [Why This Matters](#why-this-matters-plain-english)
 - [Formulas Used](#formulas-used)
 - [Setup](#setup)
-- [Data Limitations](#data-limitations)
+- [Data Source and Limitations](#data-source-and-limitations)
 - [Screenshot](#screenshot)
 - [Project Structure](#project-structure)
 
@@ -34,11 +34,10 @@ experiences from continuously rolling a long futures position over time.
 git clone https://github.com/Tanish-Shitanshu/crudecurve.git
 cd crudecurve
 pip install -r requirements.txt
-cp .env.example .env  # add your free EIA API key
 streamlit run app.py
 ```
 
-See [Setup](#setup) below for details on getting an EIA API key and
+No API key or configuration is needed. See [Setup](#setup) below for
 running the test suite.
 
 ## Why this matters (plain English)
@@ -102,59 +101,47 @@ can be compared side by side.
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env   # then edit .env and add your free EIA API key
 streamlit run app.py
+pytest
 ```
 
-CrudeCurve's term structure curve is powered by the free EIA (U.S.
-Energy Information Administration) Open Data API, which requires an API
-key:
-
-1. Register for a free key at https://www.eia.gov/opendata/register.php
-2. Put it in `.env` as `EIA_API_KEY=your_key_here` (`.env` is
-   git-ignored and never committed — see `.env.example` for the
-   template). If no key is set, the app falls back to EIA's public
-   `DEMO_KEY`, which works but is rate-limited, so it's meant for quick
-   testing only, not everyday use.
-
-Run the unit tests (offline: all network calls are mocked, so no API key
-or internet connection is needed):
-
-```bash
-pytest tests/
-```
+All market data comes from Yahoo Finance via `yfinance`, which needs no
+API key, account or `.env` file. The unit tests are offline: all network
+calls are mocked, so no internet connection is needed to run them.
 
 The suite covers curve classification and the annualized spread
 (`test_term_structure.py`), the roll-yield simulation against
-hand-computed price series (`test_roll_yield.py`), and EIA/yfinance
-parsing, missing-data handling and stale-data flagging
+hand-computed price series (`test_roll_yield.py`), and the Yahoo Finance
+contract handling — candidate ticker generation, live / expired / missing
+contracts, `month_index` spacing, network errors and the history cleanup
 (`test_data_fetcher.py`).
 
-## Data limitations
+## Data source and limitations
 
-**Forward curve (EIA API):** Yahoo Finance (via `yfinance`) does not
-publish dated forward-month WTI contracts on its free tier — verified
-directly, those symbols return no data at all. CrudeCurve instead
-sources the actual forward curve from the EIA's Open Data API, which
-publishes official daily settlement prices for WTI **Future Contract 1
-through Contract 4** (`RCLC1`–`RCLC4`; Contract 1 = front month,
-Contract 4 ≈ 3 months out, spaced roughly monthly). This is real,
-verified U.S. government market data with no gaps — but it is only
-**4 points**, not the longer 5-6 month ladder the original design
-envisioned. The curve shown will therefore look shorter than a paid
-terminal's, but every point on it is genuinely traded, current data
-rather than an estimate. See `config.py` for the exact series IDs and
-API route.
+**Forward curve (Yahoo Finance dated contracts):** the current curve is
+built from individual NYMEX WTI contracts using Yahoo's per-contract
+symbols, `CL<month code><YY>.NYM` — for example `CLZ26.NYM` is the
+December 2026 contract. On each run the app generates candidates for the
+next 9 delivery months starting from the current month, fetches each
+contract's latest daily close, and keeps the **first 6 live contracts**
+as the curve. Contracts that return no data (already expired) or whose
+latest close is more than 5 days old are dropped. `month_index` is the
+number of delivery months after the front contract, so a skipped month
+leaves a gap and the annualized spread stays correctly scaled.
 
 **Front-month history (yfinance):** `CL=F`, the continuous front-month
-WTI contract, remains sourced from yfinance for the 2-year daily
-history used in the roll-yield backtest — this series is reliable and
-has no gaps.
+WTI contract, supplies the 2-year daily history used in the roll-yield
+backtest.
 
-The app never fabricates a price for a missing contract: if EIA has no
-data for a contract series, it's dropped from the curve; if its most
-recent data is more than 5 days old, it's flagged as stale in the
-dashboard rather than presented as current.
+**Caveats:** Yahoo Finance is a free, unofficial data source. Prices are
+daily closes rather than official exchange settlements, can be delayed,
+and symbol availability can change without notice. The curve is a
+snapshot of the latest available close, not a live tick feed.
+
+The app never fabricates a price for a missing contract: if Yahoo has no
+data for a contract, it is dropped from the curve rather than estimated.
+If no contract is live at all, the dashboard shows an error instead of a
+chart.
 
 The roll-yield simulation works around the lack of a full historical
 forward ladder by using the front-month continuous series' own
@@ -163,14 +150,11 @@ the docstring in `roll_yield.py` for the full explanation).
 
 ## Screenshot
 
-_Add a screenshot of the running dashboard here, e.g.:_
-
-```
 ![CrudeCurve dashboard](docs/screenshot.png)
-```
 
-**Sample output:** Screenshot coming soon — see [Quick Start](#quick-start)
-above to run it locally in the meantime.
+The dashboard shows the current WTI futures curve with its market label
+(here, backwardation), the annualized carry, and the 2-year cumulative roll
+yield against the spot price change.
 
 ## Project structure
 
@@ -178,14 +162,15 @@ above to run it locally in the meantime.
 crudecurve/
 ├── README.md
 ├── requirements.txt
-├── .env.example          # template for EIA_API_KEY (copy to .env)
-├── config.py              # tickers, EIA series IDs, lookback window, notes
-├── data_fetcher.py        # EIA API (curve) + yfinance (history) data pulls
+├── config.py              # tickers, contract symbol template, lookback window, notes
+├── data_fetcher.py        # Yahoo Finance contracts (curve) + CL=F (history) data pulls
 ├── term_structure.py      # curve classification + annualized spread
 ├── roll_yield.py          # 2-year roll yield backtest
 ├── app.py                 # Streamlit dashboard
+├── docs/
+│   └── screenshot.png     # dashboard screenshot used in this README
 └── tests/
     ├── test_term_structure.py   # curve classification + annualized spread
     ├── test_roll_yield.py       # roll-yield simulation on synthetic series
-    └── test_data_fetcher.py     # EIA / yfinance parsing (network mocked)
+    └── test_data_fetcher.py     # contract fetching / history cleanup (network mocked)
 ```
