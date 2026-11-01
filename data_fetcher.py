@@ -1,140 +1,127 @@
 """
-data_fetcher.py — Pulls WTI crude oil futures prices from two sources:
+data_fetcher.py — Pulls WTI crude oil futures prices from Yahoo Finance
+(via yfinance):
 
-1. EIA (U.S. Energy Information Administration) Open Data API — the
-   official government source for WTI Futures Contract 1 through
-   Contract 4 daily settlement prices. This is what builds the current
-   term structure "curve" (get_current_curve()).
-2. yfinance (Yahoo Finance) — the continuous front-month series (CL=F),
-   used only for 2 years of daily history to drive the roll-yield
-   backtest (get_front_month_history()).
+1. Individual dated NYMEX WTI contracts (symbols like CLZ26.NYM), which
+   build the current term-structure "curve" (get_current_curve()).
+2. The continuous front-month series (CL=F), used for 2 years of daily
+   history to drive the roll-yield backtest (get_front_month_history()).
 
-Why two sources: yfinance does not publish dated forward-month WTI
-contracts on its free tier (verified directly — those symbols return no
-data), so it can't build a real forward curve. The EIA API does publish
-real forward contract prices (Contract 1-4), for free, with an API key.
-See config.py and the README's "Data Limitations" section for the full
-reasoning.
-
-This module never fabricates a price: if EIA or yfinance has no data
-for a series, that point is dropped rather than estimated, and stale
-data (older than STALE_DATA_THRESHOLD_DAYS) is flagged rather than
-silently presented as current.
+This module never fabricates a price: a contract with no data (e.g. one
+that has already expired) is dropped rather than estimated, and a
+contract whose latest close is older than STALE_DATA_THRESHOLD_DAYS is
+treated as expired and dropped too.
 """
 
-import os
 from datetime import datetime, timedelta
 
 import pandas as pd
-import requests
 import yfinance as yf
-from dotenv import load_dotenv
 
 from config import (
-    EIA_API_BASE_URL,
-    EIA_API_KEY_ENV_VAR,
-    EIA_CONTRACT_SERIES,
+    CANDIDATE_CONTRACT_MONTHS,
+    CONTRACT_SYMBOL_TEMPLATE,
+    CURVE_CONTRACT_COUNT,
     FRONT_MONTH_TICKER,
+    FUTURES_MONTH_CODES,
     ROLL_YIELD_LOOKBACK_YEARS,
 )
 
-load_dotenv()
-
 # A price is considered "stale" if the most recent available close is
 # older than this many calendar days. 5 days covers a normal long
-# weekend/holiday without masking a genuinely dead/delisted series.
+# weekend/holiday without masking a genuinely dead/expired contract.
 STALE_DATA_THRESHOLD_DAYS = 5
 
-# EIA's DEMO_KEY is a public, rate-limited key EIA provides for testing
-# without registration. It works but is not meant for real usage — see
-# README for how to get a free personal key.
-_FALLBACK_DEMO_KEY = "DEMO_KEY"
+# How much recent daily history to request per contract when looking for
+# its latest close (comfortably longer than the stale threshold).
+_LATEST_CLOSE_LOOKBACK = "10d"
 
 
-def _get_eia_api_key():
+def _candidate_contracts(today):
     """
-    Read the EIA API key from the environment (loaded from .env by
-    load_dotenv() above). Falls back to EIA's public DEMO_KEY so the app
-    still runs out of the box, but a real key should be used for
-    anything beyond quick testing (DEMO_KEY is rate-limited).
+    List the WTI contracts to try, in delivery order, starting with the
+    current calendar month: [(symbol, display_ticker, months_ahead), ...].
+
+    e.g. for November 2026: ("CLX26.NYM", "CLX26", 0), ("CLZ26.NYM",
+    "CLZ26", 1), ("CLF27.NYM", "CLF27", 2), ...
     """
-    return os.environ.get(EIA_API_KEY_ENV_VAR, _FALLBACK_DEMO_KEY)
+    candidates = []
+    for months_ahead in range(CANDIDATE_CONTRACT_MONTHS):
+        month_zero_based = (today.month - 1 + months_ahead) % 12
+        year = today.year + (today.month - 1 + months_ahead) // 12
+        code = FUTURES_MONTH_CODES[month_zero_based]
+        symbol = CONTRACT_SYMBOL_TEMPLATE.format(month_code=code, year=year % 100)
+        candidates.append((symbol, symbol.split(".")[0], months_ahead))
+    return candidates
 
 
-def _fetch_eia_series_latest(series_id: str, api_key: str):
+def _fetch_contract_latest(symbol: str):
     """
-    Fetch the most recent daily value for one EIA WTI futures contract
-    series (e.g. "RCLC1" = Contract 1 / front month).
+    Fetch the most recent daily close for one dated futures contract.
 
-    Plain English: this asks EIA "what did this specific forward
-    contract last settle at, and on what date?" — sorted newest first
-    and capped to 1 row, so we get exactly the latest official price.
+    Plain English: asks Yahoo "what did this specific contract last close
+    at, and on what date?" Any failure (network error, unknown/expired
+    symbol, empty or malformed data) returns no price rather than a guess.
 
     Returns a dict: {"price": float or None, "as_of": date or None}
     """
-    params = {
-        "api_key": api_key,
-        "frequency": "daily",
-        "data[0]": "value",
-        "facets[series][]": series_id,
-        "sort[0][column]": "period",
-        "sort[0][direction]": "desc",
-        "length": 1,
-    }
-
+    none = {"price": None, "as_of": None}
     try:
-        response = requests.get(EIA_API_BASE_URL, params=params, timeout=10)
-        response.raise_for_status()
-        payload = response.json()
+        history = yf.Ticker(symbol).history(period=_LATEST_CLOSE_LOOKBACK)
+        closes = history["Close"].dropna()
+        if closes.empty:
+            return none
+        return {
+            "price": float(closes.iloc[-1]),
+            "as_of": pd.Timestamp(closes.index[-1]).date(),
+        }
     except Exception:
-        return {"price": None, "as_of": None}
-
-    rows = payload.get("response", {}).get("data", [])
-    if not rows:
-        return {"price": None, "as_of": None}
-
-    row = rows[0]
-    try:
-        price = float(row["value"])
-        as_of = datetime.strptime(row["period"], "%Y-%m-%d").date()
-    except (KeyError, TypeError, ValueError):
-        return {"price": None, "as_of": None}
-
-    return {"price": price, "as_of": as_of}
+        return none
 
 
 def get_current_curve():
     """
-    Build today's futures curve from EIA's official WTI Futures
-    Contract 1 through Contract 4 daily settlement prices.
+    Build today's futures curve from individual dated WTI contracts.
 
-    Plain English: this is the "term structure" snapshot — Contract 1
-    is the front (nearest-expiry) contract, Contract 4 is roughly 3
-    months further out. Lining these four prices up shows whether the
-    market is in contango (rising) or backwardation (falling); see
-    term_structure.py for the classification logic.
+    Plain English: this is the "term structure" snapshot — the front
+    (nearest live expiry) contract followed by the next live delivery
+    months. Lining these prices up shows whether the market is in
+    contango (rising) or backwardation (falling); see term_structure.py
+    for the classification logic.
+
+    Contracts are tried in delivery order starting from the current
+    month. Ones with no data (already expired) or a last close older than
+    STALE_DATA_THRESHOLD_DAYS are dropped; the first CURVE_CONTRACT_COUNT
+    live contracts are kept.
 
     Returns a pandas DataFrame with columns:
-      ticker, month_index (0 = Contract 1 / front month, 1 = Contract 2,
-      ...), price, as_of, is_stale
-    Contracts with no data at all are dropped; contracts with old data
-    are kept but flagged is_stale=True so the dashboard can warn the
-    user instead of silently plotting a dead price.
+      ticker, month_index (delivery months after the front contract:
+      0 = front month; a skipped delivery month leaves a gap, so spacing
+      stays correct), price, as_of, is_stale
+    Returns an empty frame if no contract is live.
     """
-    api_key = _get_eia_api_key()
-    rows = []
     today = datetime.now().date()
+    rows = []
+    front_months_ahead = None
 
-    for month_index, series_id in enumerate(EIA_CONTRACT_SERIES):
-        result = _fetch_eia_series_latest(series_id, api_key)
+    for symbol, ticker, months_ahead in _candidate_contracts(today):
+        if len(rows) >= CURVE_CONTRACT_COUNT:
+            break
+
+        result = _fetch_contract_latest(symbol)
         if result["price"] is None:
-            continue  # no data at all for this contract — skip, don't fake it
+            continue  # no data (e.g. expired contract) — skip, don't fake it
 
         is_stale = (today - result["as_of"]) > timedelta(days=STALE_DATA_THRESHOLD_DAYS)
+        if is_stale:
+            continue  # last bar is old: the contract has expired/stopped trading
+
+        if front_months_ahead is None:
+            front_months_ahead = months_ahead
         rows.append(
             {
-                "ticker": series_id,
-                "month_index": month_index,
+                "ticker": ticker,
+                "month_index": months_ahead - front_months_ahead,
                 "price": result["price"],
                 "as_of": result["as_of"],
                 "is_stale": is_stale,
@@ -152,8 +139,8 @@ def get_front_month_history(years: int = ROLL_YIELD_LOOKBACK_YEARS):
     Plain English: this is the spot/front-month price history used to
     (a) show how the outright oil price moved over 2 years, and (b) as
     the input series the roll-yield simulation "rolls" through month by
-    month in roll_yield.py. yfinance's continuous front-month series is
-    reliable for this purpose (unlike its dated forward contracts).
+    month in roll_yield.py. A single continuous series gives the long
+    history that individual dated contracts (which expire) cannot.
 
     Returns a pandas DataFrame with columns: date, close.
     """

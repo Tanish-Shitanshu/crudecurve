@@ -8,7 +8,7 @@ Run with: streamlit run app.py
 import plotly.graph_objects as go
 import streamlit as st
 
-from config import EIA_CONTRACT_MONTH_SPACING
+from config import CONTRACT_MONTH_SPACING
 from data_fetcher import get_current_curve, get_front_month_history
 from term_structure import classify_curve, compute_annualized_spread
 from roll_yield import simulate_roll_yield, summarize_roll_yield
@@ -35,7 +35,7 @@ curve_df = curve_df.sort_values("month_index").reset_index(drop=True)
 classification = classify_curve(curve_df)
 front_row = curve_df.iloc[0]
 back_row = curve_df.iloc[-1]
-months_between = (back_row["month_index"] - front_row["month_index"]) * EIA_CONTRACT_MONTH_SPACING
+months_between = (back_row["month_index"] - front_row["month_index"]) * CONTRACT_MONTH_SPACING
 
 annualized_spread = compute_annualized_spread(
     front_price=front_row["price"],
@@ -54,7 +54,7 @@ st.caption(f"Front-month data as of: {front_row['as_of']}")
 
 # --- Metrics row ---------------------------------------------------------
 col1, col2, col3 = st.columns(3)
-col1.metric("Front-Month Price (EIA Contract 1)", f"${front_row['price']:.2f}")
+col1.metric("Front-Month Price", f"${front_row['price']:.2f}")
 col2.metric("Annualized Carry/Backwardation", f"{annualized_spread:+.2f}%")
 col3.metric("2-Year Cumulative Roll Yield", f"${cumulative_roll_yield:+.2f}/bbl")
 
