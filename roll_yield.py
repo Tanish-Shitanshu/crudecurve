@@ -30,7 +30,7 @@ import pandas as pd
 from config import ROLL_DAYS_BEFORE_MONTH_END
 
 
-def simulate_roll_yield(history_df):
+def simulate_roll_yield(history_df: pd.DataFrame) -> pd.DataFrame:
     """
     Walk through 2 years of daily front-month closes and split the total
     price move into two pieces every month:
@@ -88,7 +88,7 @@ def simulate_roll_yield(history_df):
     return pd.DataFrame(records)
 
 
-def summarize_roll_yield(roll_yield_df):
+def summarize_roll_yield(roll_yield_df: pd.DataFrame) -> float:
     """
     Pull the headline 2-year cumulative roll yield (in dollars/barrel)
     out of the full daily series — the single number shown in the

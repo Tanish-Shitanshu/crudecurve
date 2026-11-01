@@ -1,7 +1,8 @@
-yfinance>=0.2.40
-streamlit>=1.35
-pandas>=2.0
-numpy>=1.24
-plotly>=5.20
-pytest>=7.4
-openpyxl>=3.1
+# Runtime dependencies, pinned to the versions the project was tested with
+# (Python 3.13). Needed to run the dashboard, including on Streamlit Community Cloud.
+yfinance==1.7.0
+streamlit==1.63.0
+pandas==3.0.5
+numpy==2.5.2
+plotly==7.0.0
+openpyxl==3.1.5

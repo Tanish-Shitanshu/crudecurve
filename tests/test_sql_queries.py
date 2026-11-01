@@ -92,7 +92,7 @@ def test_quality_failures_grouped_by_rule_ignore_pass_and_skipped():
 
     df = sql_queries.run_query(conn, "quality_failures_by_rule")
 
-    assert list(zip(df["rule"], df["status"], df["occurrences"])) == [
+    assert list(zip(df["rule"], df["status"], df["occurrences"], strict=True)) == [
         ("price_valid", "fail", 3),
         ("outlier_check", "flag", 1),
     ]
@@ -122,7 +122,8 @@ def test_parameters_are_bound_not_pasted_into_the_sql(conn):
 
 def test_connection_is_writable_again_after_a_query(conn):
     sql_queries.run_query(conn, "spread_daily_change", front="CLZ26", back="CLK27")
-    storage.log_quality_results(conn, "2026-11-01T10:00:00", [RuleResult("C", "r", "pass", "x")])  # would raise if still read-only
+    # This write would raise an error if the connection were still read-only.
+    storage.log_quality_results(conn, "2026-11-01T10:00:00", [RuleResult("C", "r", "pass", "x")])
 
 
 def test_every_preset_query_is_read_only_sql():

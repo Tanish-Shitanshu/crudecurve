@@ -4,6 +4,7 @@ data (the metrics dictionary, data frames) and only decides how to show it;
 no market calculations happen here.
 """
 
+import sqlite3
 from pathlib import Path
 
 import pandas as pd
@@ -48,7 +49,9 @@ def render_overview(m: dict, curve: pd.DataFrame, history: pd.DataFrame, quality
 
     risk95 = m["risk"]["var"][0.95]
     cards = st.columns(5)
-    cards[0].metric("Front price", format_usd(m["front_price"]), help=f"{m['front_ticker']}, USD per barrel", border=True)
+    cards[0].metric(
+        "Front price", format_usd(m["front_price"]), help=f"{m['front_ticker']}, USD per barrel", border=True
+    )
     cards[1].metric(
         "Annualised carry", format_pct(m["annualised_carry_pct"], signed=True),
         help="Front-to-back spread stretched to a year. Positive = contango, negative = backwardation.",
@@ -86,7 +89,7 @@ def render_overview(m: dict, curve: pd.DataFrame, history: pd.DataFrame, quality
     )
 
 
-def render_curve(m: dict, curve: pd.DataFrame, spread_df: pd.DataFrame, front: str, back: str) -> None:
+def render_curve(m: dict, curve: pd.DataFrame, spread_df: pd.DataFrame, front: str | None, back: str | None) -> None:
     """The current curve, its table and the spread history of the chosen pair."""
     st.plotly_chart(charts.curve_figure(curve), use_container_width=True)
     st.caption(
@@ -134,7 +137,11 @@ def _var_table(m: dict) -> pd.DataFrame:
     """VaR for the selected window and the last 12 months, with observation counts."""
     rows = []
     risk = m["risk"]
-    for label, key in ((f"{m['lookback_years']} years", "var"), (f"Last {RECENT_WINDOW_DAYS // 30} months", "var_recent")):
+    windows = (
+        (f"{m['lookback_years']} years", "var"),
+        (f"Last {RECENT_WINDOW_DAYS // 30} months", "var_recent"),
+    )
+    for label, key in windows:
         for confidence in VAR_CONFIDENCE_LEVELS:
             v = risk[key][confidence]
             rows.append({
@@ -162,7 +169,11 @@ def render_risk(m: dict) -> None:
 
     drawdown, worst = risk["max_drawdown"], risk["worst_day"]
     cols = st.columns(3)
-    cols[0].metric("Volatility (21-day, annualised)", format_optional(risk["volatility"], lambda v: format_pct(v * 100, 1)), border=True)
+    cols[0].metric(
+        "Volatility (21-day, annualised)",
+        format_optional(risk["volatility"], lambda v: format_pct(v * 100, 1)),
+        border=True,
+    )
     cols[1].metric(
         "Max drawdown", format_pct(drawdown["max_drawdown"] * 100, 1), border=True,
         help=f"Peak {drawdown['peak_date']}, trough {drawdown['trough_date']}.",
@@ -179,7 +190,7 @@ def render_risk(m: dict) -> None:
     )
 
 
-def render_sql(conn, front: str, back: str) -> None:
+def render_sql(conn: sqlite3.Connection, front: str | None, back: str | None) -> None:
     """The preset SQL queries: SQL text, then the result table."""
     st.write(
         "These analyses run as SQL on the SQLite database the app fills on every refresh. "
@@ -205,7 +216,7 @@ def render_quality(m: dict, quality: pd.DataFrame) -> None:
     """The validation outcome of this run."""
     counts = quality["status"].value_counts() if not quality.empty else pd.Series(dtype=int)
     cols = st.columns(4)
-    for col, status in zip(cols, ("pass", "flag", "fail", "skipped")):
+    for col, status in zip(cols, ("pass", "flag", "fail", "skipped"), strict=True):
         col.metric(status.capitalize(), int(counts.get(status, 0)), border=True)
     st.caption(
         "Pass: rule satisfied. Flag: a warning, data kept (outlier check). Fail: a real violation. "

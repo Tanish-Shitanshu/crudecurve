@@ -24,6 +24,7 @@ import data_fetcher
 import storage
 import validation
 from config import BACKFILL_PERIOD, REFRESH_MAX_GAP_DAYS, REFRESH_PERIOD
+from validation import RuleResult
 
 
 @dataclass
@@ -31,13 +32,13 @@ class CurveResult:
     """What the dashboard gets back from load_curve()."""
 
     curve: pd.DataFrame
-    results: list  # validation RuleResults from this run
+    results: list[RuleResult]  # validation outcomes from this run
     source: str  # "live", "snapshot" or "none"
-    as_of: date  # date of the front contract's close (None if source is "none")
+    as_of: date | None  # front contract's close date (None if source is "none")
     message: str  # banner/error text; empty for live data
 
 
-def _history_period(latest_stored, today: date) -> str:
+def _history_period(latest_stored: date | None, today: date) -> str:
     """Backfill a full year the first time (or after a long gap), else just top up."""
     if latest_stored is None or (today - latest_stored).days > REFRESH_MAX_GAP_DAYS:
         return BACKFILL_PERIOD
@@ -53,7 +54,7 @@ def update_contract_prices(conn: sqlite3.Connection, curve: pd.DataFrame, today:
             storage.save_contract_prices(conn, contract, history)
 
 
-def load_curve(conn: sqlite3.Connection, today: date = None) -> CurveResult:
+def load_curve(conn: sqlite3.Connection, today: date | None = None) -> CurveResult:
     """Fetch and validate the live curve, falling back to the saved snapshot."""
     today = today or datetime.now().date()
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")

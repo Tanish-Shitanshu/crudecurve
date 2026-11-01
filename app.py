@@ -27,7 +27,7 @@ st.set_page_config(page_title="CrudeCurve", layout="wide")
 
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Fetching WTI futures data...")
-def load_market_data():
+def load_market_data() -> tuple:
     """Fetch, validate and save the curve, and download the CL=F history."""
     conn = storage.get_connection()
     try:

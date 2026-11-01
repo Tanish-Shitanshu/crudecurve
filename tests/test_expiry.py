@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from expiry import contract_expiry
+from expiry import contract_expiry, roll_dates
 
 
 def test_december_2025_contract_expires_20_nov_2025():
@@ -33,8 +33,6 @@ def test_january_delivery_uses_december_of_the_previous_year():
 
 
 # --- roll_dates --------------------------------------------------------------
-
-from expiry import roll_dates
 
 
 def test_roll_day_is_the_first_business_day_after_expiry():

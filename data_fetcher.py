@@ -15,7 +15,7 @@ This module never fabricates a price: if Yahoo has no data for a
 contract, the price is left empty rather than estimated.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import NamedTuple
 
 import pandas as pd
@@ -44,7 +44,7 @@ class Candidate(NamedTuple):
     delivery_month: str  # "YYYY-MM", e.g. "2026-12"
 
 
-def _candidate_contracts(today) -> list:
+def _candidate_contracts(today: date) -> list[Candidate]:
     """
     List the WTI contracts to try, in delivery order, starting with the
     current calendar month.
@@ -87,7 +87,7 @@ def _fetch_contract_latest(symbol: str) -> dict:
         return none
 
 
-def fetch_candidate_quotes(today=None) -> pd.DataFrame:
+def fetch_candidate_quotes(today: date | None = None) -> pd.DataFrame:
     """
     Fetch the latest close of every candidate contract, in delivery order.
 

@@ -23,6 +23,8 @@ answers two questions:
      compute_annualized_spread().
 """
 
+import pandas as pd
+
 from config import MONTHS_PER_YEAR
 
 # If the front-to-back price difference is smaller than this fraction of
@@ -31,7 +33,7 @@ from config import MONTHS_PER_YEAR
 FLAT_CURVE_THRESHOLD_PCT = 0.05  # 0.05% of front price
 
 
-def classify_curve(curve_df):
+def classify_curve(curve_df: pd.DataFrame) -> dict:
     """
     Label the curve as "Contango", "Backwardation", "Flat", or note that
     it is "kinked" (not a straight monotonic slope end-to-end).
@@ -82,7 +84,7 @@ def classify_curve(curve_df):
     return {"label": label, "is_monotonic": is_monotonic}
 
 
-def compute_annualized_spread(front_price, far_price, months_between):
+def compute_annualized_spread(front_price: float, far_price: float, months_between: float) -> float:
     """
     Convert the raw price gap between the front month and a farther-out
     month into an annualized percentage — the implied yearly storage

@@ -71,7 +71,7 @@ def check_not_expired(contract: str, delivery_month: str, has_data: bool, today:
     return RuleResult(contract, "not_expired", "pass", f"trades until {expiry}")
 
 
-def check_price_valid(contract: str, price) -> RuleResult:
+def check_price_valid(contract: str, price: float | None) -> RuleResult:
     """Fail unless the price is a finite number greater than zero."""
     if price is None or not math.isfinite(price) or price <= 0:
         return RuleResult(contract, "price_valid", "fail", f"price {price} is not a finite number > 0")
@@ -114,7 +114,7 @@ def check_min_live_contracts(curve: pd.DataFrame) -> RuleResult:
     return RuleResult(CURVE, "min_live_contracts", "pass", f"{len(curve)} live contracts")
 
 
-def find_outliers(curve: pd.DataFrame) -> list:
+def find_outliers(curve: pd.DataFrame) -> list[RuleResult]:
     """
     Flag (never drop) a contract whose price is more than OUTLIER_PCT away
     from the average of its neighbours on the curve. The first and last
@@ -139,7 +139,7 @@ def find_outliers(curve: pd.DataFrame) -> list:
 
 # --- Putting the rules together -------------------------------------------------
 
-def validate_curve(quotes: pd.DataFrame, today: date):
+def validate_curve(quotes: pd.DataFrame, today: date) -> tuple[pd.DataFrame, list[RuleResult]]:
     """
     Apply every rule to the candidate quotes from data_fetcher.
 
@@ -201,6 +201,6 @@ def validate_curve(quotes: pd.DataFrame, today: date):
     return curve, results
 
 
-def curve_is_usable(results: list) -> bool:
+def curve_is_usable(results: list[RuleResult]) -> bool:
     """The curve can be used unless a curve-level rule failed."""
     return not any(r.contract == CURVE and r.status == "fail" for r in results)

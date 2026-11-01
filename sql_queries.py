@@ -35,7 +35,7 @@ class PresetQuery:
     title: str
     description: str
     sql: str
-    params: tuple  # names of the bound parameters the query needs
+    params: tuple[str, ...]  # names of the bound parameters the query needs
 
 
 QUERIES = {

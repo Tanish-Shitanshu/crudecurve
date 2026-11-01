@@ -55,6 +55,11 @@ def _write_table(ws, headers: list, rows: list, formats: list = None) -> None:
         ws.column_dimensions[get_column_letter(col)].width = min(max(longest + 2, 10), 70)
 
 
+def _cell(value, number_format: str):
+    """A (value, number_format) cell, or the text "n/a" when there is no value."""
+    return "n/a" if value is None else (value, number_format)
+
+
 def _summary_rows(m: dict) -> list:
     risk = m["risk"]
     rows = [
@@ -68,19 +73,25 @@ def _summary_rows(m: dict) -> list:
         ["Annualised carry", (m["annualised_carry_pct"] / 100, PCT), "Positive = contango, negative = backwardation"],
         ["Position size (contracts)", m["n_contracts"], "1 contract = 1,000 barrels"],
         ["Position notional", (m["notional"], USD0), "Front price x 1,000 x contracts"],
-        ["Annual roll gain / (cost)", (m["roll_gain_per_year"], USD0), "Long position, curve unchanged; positive = gain"],
-        ["2-year roll-window proxy ($/bbl)", (m["roll_window_proxy"], USD), "A proxy from month-end price moves, not a true roll yield"],
+        [
+            "Annual roll gain / (cost)", (m["roll_gain_per_year"], USD0),
+            "Long position, curve unchanged; positive = gain",
+        ],
+        [
+            "2-year roll-window proxy ($/bbl)", (m["roll_window_proxy"], USD),
+            "A proxy from month-end price moves, not a true roll yield",
+        ],
     ]
     for confidence in VAR_CONFIDENCE_LEVELS:
         v = risk["var"][confidence]
         rows.append([
             f"1-day VaR {int(confidence * 100)}% ({m['lookback_years']}y)",
-            (v["var_usd"], USD0) if v["var_usd"] is not None else "n/a",
+            _cell(v["var_usd"], USD0),
             f"{v['observations']} observations",
         ])
     rows += [
-        ["Volatility (21-day, annualised)", (risk["volatility"], PCT) if risk["volatility"] is not None else "n/a", ""],
-        ["Max drawdown", (risk["max_drawdown"]["max_drawdown"], PCT) if risk["max_drawdown"]["max_drawdown"] is not None else "n/a", "Roll days treated as 0%"],
+        ["Volatility (21-day, annualised)", _cell(risk["volatility"], PCT), ""],
+        ["Max drawdown", _cell(risk["max_drawdown"]["max_drawdown"], PCT), "Roll days treated as 0%"],
         ["Market summary", build_market_summary(m), ""],
         ["Limitations", LIMITATIONS, ""],
     ]
@@ -89,25 +100,26 @@ def _summary_rows(m: dict) -> list:
 
 def _risk_rows(m: dict) -> list:
     risk = m["risk"]
+    recent_label = f"Last {RECENT_WINDOW_DAYS // 30} months"
+    windows = (
+        (f"{m['lookback_years']} years", "var"),
+        (recent_label, "var_recent"),
+    )
     rows = []
-    for label, key, window in (
-        (f"{m['lookback_years']} years", "var", f"{risk['window_start']} to {risk['window_end']}"),
-        (f"Last {RECENT_WINDOW_DAYS // 30} months", "var_recent", f"most recent {RECENT_WINDOW_DAYS} days"),
-    ):
+    for label, key in windows:
         for confidence in VAR_CONFIDENCE_LEVELS:
             v = risk[key][confidence]
             rows.append([
                 f"1-day VaR {int(confidence * 100)}%", label,
-                (v["var_pct"], PCT) if v["var_pct"] is not None else "n/a",
-                (v["var_usd"], USD0) if v["var_usd"] is not None else "n/a",
-                v["observations"],
+                _cell(v["var_pct"], PCT), _cell(v["var_usd"], USD0), v["observations"],
             ])
     dd, worst = risk["max_drawdown"], risk["worst_day"]
+    span = f"{risk['window_start']} to {risk['window_end']}"
     rows += [
-        ["Volatility (21-day, annualised)", "latest", (risk["volatility"], PCT) if risk["volatility"] is not None else "n/a", "n/a", ""],
-        ["Max drawdown", f"{dd['peak_date']} to {dd['trough_date']}", (dd["max_drawdown"], PCT) if dd["max_drawdown"] is not None else "n/a", "n/a", ""],
-        ["Worst day", str(worst["date"]), (worst["return"], PCT) if worst["return"] is not None else "n/a", "n/a", ""],
-        ["Roll days excluded", f"{risk['window_start']} to {risk['window_end']}", "n/a", "n/a", risk["roll_days_excluded"]],
+        ["Volatility (21-day, annualised)", "latest", _cell(risk["volatility"], PCT), "n/a", ""],
+        ["Max drawdown", f"{dd['peak_date']} to {dd['trough_date']}", _cell(dd["max_drawdown"], PCT), "n/a", ""],
+        ["Worst day", str(worst["date"]), _cell(worst["return"], PCT), "n/a", ""],
+        ["Roll days excluded", span, "n/a", "n/a", risk["roll_days_excluded"]],
     ]
     return rows
 

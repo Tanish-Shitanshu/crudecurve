@@ -1,0 +1,11 @@
+# Dev-only configuration (linting and tests). The app itself does not need this file.
+[tool.ruff]
+line-length = 120
+extend-exclude = ["notes", "data"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes (unused imports/variables), I: import order, B: likely bugs
+select = ["E", "W", "F", "I", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

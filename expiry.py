@@ -33,7 +33,7 @@ def contract_expiry(delivery_year: int, delivery_month: int) -> date:
     return (anchor - 3 * _BUSINESS_DAY).date()
 
 
-def roll_dates(start: date, end: date) -> list:
+def roll_dates(start: date, end: date) -> list[date]:
     """
     The "roll days" between start and end (inclusive): the first business
     day after each contract's last trading day.

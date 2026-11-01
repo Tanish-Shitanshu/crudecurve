@@ -64,7 +64,7 @@ def compute_returns(history: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def window_returns(returns: pd.DataFrame, years: float = None, days: int = None) -> pd.DataFrame:
+def window_returns(returns: pd.DataFrame, years: float | None = None, days: int | None = None) -> pd.DataFrame:
     """The rows of `returns` within the last `years` years (or `days` days) of its last date."""
     if returns.empty:
         return returns

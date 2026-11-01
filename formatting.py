@@ -7,6 +7,9 @@ Rule for negatives: the minus sign goes in front of the dollar sign
 ("-$1.88", not "$-1.88").
 """
 
+from collections.abc import Callable
+from typing import Any
+
 
 def format_usd(value: float, decimals: int = 2) -> str:
     """1234.5 -> "$1,234.50", -1.88 -> "-$1.88"."""
@@ -31,6 +34,6 @@ def format_pct(value: float, decimals: int = 2, signed: bool = False) -> str:
     return f"{value:.{decimals}f}%"
 
 
-def format_optional(value, formatter, missing: str = "n/a") -> str:
+def format_optional(value: Any, formatter: Callable[[Any], str], missing: str = "n/a") -> str:
     """Apply `formatter` to value, or return `missing` if there is no value."""
     return missing if value is None else formatter(value)

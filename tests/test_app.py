@@ -94,7 +94,10 @@ def test_changing_position_size_scales_the_roll_gain(offline_app):
     one = next(m.value for m in at.metric if m.label == "Annual roll gain / (cost)")
     at.sidebar.number_input[0].set_value(2).run()
     two = next(m.value for m in at.metric if m.label == "Annual roll gain / (cost)")
-    to_number = lambda text: float(text.replace("$", "").replace(",", "").replace("+", ""))
+
+    def to_number(text):
+        return float(text.replace("$", "").replace(",", "").replace("+", ""))
+
     assert to_number(two) == pytest.approx(2 * to_number(one), rel=0.01)
 
 

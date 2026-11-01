@@ -24,6 +24,7 @@ from pathlib import Path
 import pandas as pd
 
 from config import DB_PATH
+from validation import RuleResult
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS curve_snapshots (
@@ -128,7 +129,7 @@ def save_contract_prices(conn: sqlite3.Connection, contract: str, history: pd.Da
     conn.commit()
 
 
-def latest_trade_date(conn: sqlite3.Connection, contract: str):
+def latest_trade_date(conn: sqlite3.Connection, contract: str) -> date | None:
     """The newest stored trade date for a contract, or None if it has none yet."""
     value = conn.execute(
         "SELECT MAX(trade_date) FROM contract_prices WHERE contract = ?", (contract,)
@@ -136,7 +137,7 @@ def latest_trade_date(conn: sqlite3.Connection, contract: str):
     return date.fromisoformat(value) if value else None
 
 
-def list_price_contracts(conn: sqlite3.Connection) -> list:
+def list_price_contracts(conn: sqlite3.Connection) -> list[str]:
     """Contracts that have stored closes, ordered by delivery month (e.g. CLZ26, CLF27, ...)."""
     rows = conn.execute(
         """
@@ -152,7 +153,7 @@ def list_price_contracts(conn: sqlite3.Connection) -> list:
 
 # --- Data quality log -----------------------------------------------------------
 
-def log_quality_results(conn: sqlite3.Connection, run_at: str, results: list) -> None:
+def log_quality_results(conn: sqlite3.Connection, run_at: str, results: list[RuleResult]) -> None:
     """Append one row per validation RuleResult."""
     rows = [(run_at, r.contract, r.rule, r.status, r.detail) for r in results]
     conn.executemany(

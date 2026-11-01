@@ -15,7 +15,6 @@ from roll_yield import simulate_roll_yield, summarize_roll_yield
 from term_structure import classify_curve, compute_annualized_spread
 
 
-
 def build_metrics(
     curve: pd.DataFrame,
     history: pd.DataFrame,
