@@ -13,18 +13,18 @@ def m(curve, history):
 
 def test_var_table_has_three_narrow_columns_and_four_rows(m):
     table = views._var_table(m)
-    assert list(table.columns) == ["1-day VaR", "Loss (USD, % of notional)", "Observations"]
+    assert list(table.columns) == ["VaR", "Loss (USD, %)", "Obs."]
     assert len(table) == 4
-    assert list(table["1-day VaR"]) == ["95%, 2 years", "99%, 2 years", "95%, last 12 months", "99%, last 12 months"]
+    assert list(table["VaR"]) == ["95%, 2y", "99%, 2y", "95%, 12m", "99%, 12m"]
 
 
 def test_var_table_shows_dollars_percent_and_observation_counts(m):
     table = views._var_table(m)
     v = m["risk"]["var"][0.95]
-    assert table["Observations"].iloc[0] == v["observations"]
-    loss = table["Loss (USD, % of notional)"].iloc[0]
+    assert table["Obs."].iloc[0] == v["observations"]
+    loss = table["Loss (USD, %)"].iloc[0]
     assert loss.startswith("$") and loss.endswith("%)")
-    assert table["Observations"].iloc[2] < table["Observations"].iloc[0]  # 12 months has fewer than 2 years
+    assert table["Obs."].iloc[2] < table["Obs."].iloc[0]  # 12 months has fewer than 2 years
 
 
 def test_var_table_handles_missing_history():
@@ -35,5 +35,5 @@ def test_var_table_handles_missing_history():
         pd.DataFrame(columns=["date", "close"]), 5, 1,
     )
     table = views._var_table(empty)
-    assert set(table["Loss (USD, % of notional)"]) == {"n/a (n/a)"}
-    assert set(table["Observations"]) == {0}
+    assert set(table["Loss (USD, %)"]) == {"n/a (n/a)"}
+    assert set(table["Obs."]) == {0}

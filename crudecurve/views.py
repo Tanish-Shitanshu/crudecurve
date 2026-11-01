@@ -137,8 +137,8 @@ def _var_table(m: dict) -> pd.DataFrame:
     rows = []
     risk = m["risk"]
     windows = (
-        (f"{m['lookback_years']} years", "var"),
-        (f"last {RECENT_WINDOW_DAYS // 30} months", "var_recent"),
+        (f"{m['lookback_years']}y", "var"),
+        (f"{RECENT_WINDOW_DAYS // 30}m", "var_recent"),
     )
     for label, key in windows:
         for confidence in VAR_CONFIDENCE_LEVELS:
@@ -146,9 +146,9 @@ def _var_table(m: dict) -> pd.DataFrame:
             usd = format_optional(v["var_usd"], lambda x: format_usd(x, 0))
             pct = format_optional(v["var_pct"], lambda x: format_pct(x * 100))
             rows.append({
-                "1-day VaR": f"{int(confidence * 100)}%, {label}",
-                "Loss (USD, % of notional)": f"{usd} ({pct})",
-                "Observations": v["observations"],
+                "VaR": f"{int(confidence * 100)}%, {label}",
+                "Loss (USD, %)": f"{usd} ({pct})",
+                "Obs.": v["observations"],
             })
     return pd.DataFrame(rows)
 
@@ -165,6 +165,8 @@ def render_risk(m: dict) -> None:
         f"{risk['roll_days_excluded']} roll days excluded."
     ))
     st.dataframe(_var_table(m), hide_index=True, use_container_width=True)
+    st.caption("1-day VaR as a loss in USD and as a % of notional. Obs. = number of daily returns used "
+               "(y = years, m = months).")
 
     drawdown, worst = risk["max_drawdown"], risk["worst_day"]
     cols = st.columns(3)
