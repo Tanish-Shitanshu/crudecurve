@@ -95,3 +95,17 @@ def test_quality_results_are_logged():
     storage.log_quality_results(conn, "2026-11-01T10:00:00", results)
     rows = conn.execute("SELECT contract, rule, status FROM data_quality_log ORDER BY contract").fetchall()
     assert rows == [("CLX26", "not_expired", "skipped"), ("CURVE", "min_live_contracts", "pass")]
+
+
+def test_list_price_contracts_is_ordered_by_delivery_month_not_alphabetically():
+    conn = _conn()
+    # CLZ26 (2026-12) is delivered before CLF27 (2027-01), but "CLF27" sorts first alphabetically.
+    curve = pd.DataFrame(
+        {"ticker": ["CLF27", "CLZ26"], "delivery_month": ["2027-01", "2026-12"],
+         "month_index": [1, 0], "price": [1.0, 2.0], "as_of": date(2026, 10, 30)}
+    )
+    storage.save_snapshot(conn, curve, "2026-11-01T10:00:00")
+    history = pd.DataFrame({"trade_date": [date(2026, 10, 30)], "close": [1.0]})
+    storage.save_contract_prices(conn, "CLF27", history)
+    storage.save_contract_prices(conn, "CLZ26", history)
+    assert storage.list_price_contracts(conn) == ["CLZ26", "CLF27"]

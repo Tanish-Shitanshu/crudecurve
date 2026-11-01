@@ -136,6 +136,20 @@ def latest_trade_date(conn: sqlite3.Connection, contract: str):
     return date.fromisoformat(value) if value else None
 
 
+def list_price_contracts(conn: sqlite3.Connection) -> list:
+    """Contracts that have stored closes, ordered by delivery month (e.g. CLZ26, CLF27, ...)."""
+    rows = conn.execute(
+        """
+        SELECT p.contract
+        FROM (SELECT DISTINCT contract FROM contract_prices) AS p
+        JOIN (SELECT contract, MAX(delivery_month) AS delivery_month
+              FROM curve_snapshots GROUP BY contract) AS s ON s.contract = p.contract
+        ORDER BY s.delivery_month
+        """
+    ).fetchall()
+    return [row[0] for row in rows]
+
+
 # --- Data quality log -----------------------------------------------------------
 
 def log_quality_results(conn: sqlite3.Connection, run_at: str, results: list) -> None:
