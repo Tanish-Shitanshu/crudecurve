@@ -57,6 +57,26 @@ MIN_LIVE_CONTRACTS = 4
 # neighbours on the curve is flagged (not dropped) as a possible bad print.
 OUTLIER_PCT = 10.0
 
+# --- Risk metrics (see risk.py) -------------------------------------------
+# One NYMEX WTI futures contract covers 1,000 barrels.
+BARRELS_PER_CONTRACT = 1000
+
+# Confidence levels for historical-simulation Value at Risk.
+VAR_CONFIDENCE_LEVELS = (0.95, 0.99)
+
+# Rolling volatility window, in (non-roll) trading days.
+VOLATILITY_WINDOW_DAYS = 21
+
+# CL=F history is downloaded once for this many years; the VaR lookback
+# selector offers RISK_LOOKBACK_OPTIONS_YEARS, and the roll chart uses the
+# last ROLL_YIELD_LOOKBACK_YEARS of it.
+RISK_HISTORY_YEARS = 5
+RISK_LOOKBACK_OPTIONS_YEARS = (2, 5)
+DEFAULT_RISK_LOOKBACK_YEARS = 5
+
+# The "recent" VaR shown next to the selected-lookback VaR.
+RECENT_WINDOW_DAYS = 365
+
 # --- Lookback windows -----------------------------------------------
 # 2 years of daily history, matching the roll-yield backtest requirement.
 ROLL_YIELD_LOOKBACK_YEARS = 2

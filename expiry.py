@@ -31,3 +31,28 @@ def contract_expiry(delivery_year: int, delivery_month: int) -> date:
     # rollback() leaves a business day alone, otherwise moves to the one before it.
     anchor = _BUSINESS_DAY.rollback(the_25th)
     return (anchor - 3 * _BUSINESS_DAY).date()
+
+
+def roll_dates(start: date, end: date) -> list:
+    """
+    The "roll days" between start and end (inclusive): the first business
+    day after each contract's last trading day.
+
+    Why: Yahoo's CL=F is one unadjusted series that switches from the
+    expiring contract to the next one when the old one expires. On that
+    day the series jumps by the price gap between the two contracts, which
+    is not a real market move. Risk calculations leave these days out.
+    """
+    roll_days = []
+    # A contract delivering in month M expires in month M-1, so delivery
+    # months from `start`'s month to two months after `end` cover every
+    # expiry in the window.
+    delivery = pd.Timestamp(start.year, start.month, 1)
+    last_delivery = pd.Timestamp(end.year, end.month, 1) + pd.DateOffset(months=2)
+    while delivery <= last_delivery:
+        expiry = contract_expiry(delivery.year, delivery.month)
+        roll_day = (pd.Timestamp(expiry) + _BUSINESS_DAY).date()
+        if start <= roll_day <= end:
+            roll_days.append(roll_day)
+        delivery += pd.DateOffset(months=1)
+    return roll_days
