@@ -117,11 +117,18 @@ key:
    `DEMO_KEY`, which works but is rate-limited, so it's meant for quick
    testing only, not everyday use.
 
-Run the unit tests:
+Run the unit tests (offline: all network calls are mocked, so no API key
+or internet connection is needed):
 
 ```bash
 pytest tests/
 ```
+
+The suite covers curve classification and the annualized spread
+(`test_term_structure.py`), the roll-yield simulation against
+hand-computed price series (`test_roll_yield.py`), and EIA/yfinance
+parsing, missing-data handling and stale-data flagging
+(`test_data_fetcher.py`).
 
 ## Data limitations
 
@@ -178,5 +185,7 @@ crudecurve/
 ├── roll_yield.py          # 2-year roll yield backtest
 ├── app.py                 # Streamlit dashboard
 └── tests/
-    └── test_term_structure.py
+    ├── test_term_structure.py   # curve classification + annualized spread
+    ├── test_roll_yield.py       # roll-yield simulation on synthetic series
+    └── test_data_fetcher.py     # EIA / yfinance parsing (network mocked)
 ```
