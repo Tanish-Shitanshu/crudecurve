@@ -42,12 +42,18 @@ The Overview tab is above. The other six tabs (click an image for full size):
 
 ## Quick start
 
+Needs Python 3.13 (the version used in development and CI).
+
 ```bash
 git clone https://github.com/Tanish-Shitanshu/crudecurve.git
 cd crudecurve
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+Streamlit prints the local address in the terminal and opens it in your browser.
 
 The first run downloads about a year of daily closes per live contract into `data/crudecurve.db` (git-ignored), so it takes a little longer.
 
